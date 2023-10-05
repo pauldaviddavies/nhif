@@ -113,6 +113,12 @@ public class PaymentsService {
                     log.info("Sponsor Beneficiary with Id {} for the sponsor with phone number {} was not found. {}", request.getBody().getBeneficiaryIdOrPassportNumber(), request.getBody().getMobileNumber(), new Date());
                     return new Response<>(new Header(String.format("Sponsor Beneficiary with Id %s was not found.", request.getBody().getBeneficiaryIdOrPassportNumber()), ResponseCodes.BENE_SPONSOR.getCode()));
                 }
+
+                if (beneficiary.get().getMemberNumber() == null || beneficiary.get().getMemberNumber().equals("")) {
+                    stringBuilder.append("\n").append("Beneficiary has no member number");
+                    log.info("Beneficiary  {} has no member number", request.getBody().getBeneficiaryIdOrPassportNumber());
+                    return new Response<>(new Header(String.format("Sponsor Beneficiary with Id %s has no member number.", request.getBody().getBeneficiaryIdOrPassportNumber()), ResponseCodes.MEMBER_NUMBER.getCode()));
+                }
             }
             else
             {
@@ -134,7 +140,7 @@ public class PaymentsService {
             fundsTransferRequests.setBeneficiaryMemberNumber(beneficiary.get().getMemberNumber());
             fundsTransferRequests.setDescription(request.getBody().getDescription());
             fundsTransferRequests.setDateCreated(LocalDateTime.now());
-            fundsTransferRequests.setReferenceNumber(General.getReference("FT"));
+            fundsTransferRequests.setReferenceNumber(General.getReference("FT"+request.getBody().getIdNumber()));
 
             Optional<FundsTransferRequests> pendingRequest = fundsTransferRequestsRepository.findPendingTransactions(fundsTransferRequests.getMobileNumber(),fundsTransferRequests.getAmount(),fundsTransferRequests.getBeneficiaryIdOrPassportNumber(),fundsTransferRequests.getDescription(),false);
             if(pendingRequest.isPresent()) {

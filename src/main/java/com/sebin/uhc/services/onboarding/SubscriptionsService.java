@@ -96,12 +96,21 @@ public class SubscriptionsService {
                 throw new ExceptionManager(String.format("National Id or Passport %s is already subscribed.", request.getBody().getPersonId()), ResponseCodes.ID_PASSPORT.getCode());
             }
 
+            if(request.getBody().isNHIFMember())
+            {
+                if (strPredicate.test(request.getBody().getMemberNumber())) {
+                    stringBuilder.append("\n").append("Missing NHIF number");
+                    log.info("Beneficiary request missing NHIF member number {} for request {}", new Date(), request.getHeader().getRequestId());
+                    throw new ExceptionManager("Member number is missing.", ResponseCodes.MEMBER_NUMBER.getCode());
+                }
+            }
+
             Subscriptions person = new Subscriptions(request.getBody().getMobileNumber(), request.getBody().getPersonId(), request.getBody().getFirstName(), request.getBody().getMiddleName(), request.getBody().getSurname(), Statuses.ACTIVE.getStatus(), request.getBody().isNHIFMember(), new Wallet());
             person.setMemberNumber(request.getBody().getMemberNumber());
             person.setDateOfBirth(request.getBody().getDateOfBirth());
             person.setGender(request.getBody().getGender());
-            person.setKcbMessageId(General.getReference("SUBSCR"));
-            person.setKcbExternalId(General.getReference("SUBSCR_EXT"));
+            person.setKcbMessageId(General.getReference("SC"+request.getBody().getPersonId()));
+            person.setKcbExternalId(General.getReference("SCXT"+request.getBody().getPersonId()));
             person = repository.save(person);
             stringBuilder.append("\nSeems to have saved the record for subscription; one more check to ascertain.");
 
