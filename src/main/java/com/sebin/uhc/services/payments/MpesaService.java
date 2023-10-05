@@ -68,26 +68,38 @@ public class MpesaService {
             }
 
             if(stringPredicate.test(request.getBody().getIdNumber())) {
-                stringBuilder.append("\nID Number missing in the request.");
+                stringBuilder.append("\n").append("ID Number missing in the request.");
                 log.info("ID Number missing in the request {}", new Date());
                 throw new ExceptionManager("Your ID Number is missing in the request.", ResponseCodes.MOBILE.getCode());
             }
 
             if(stringPredicate.test(request.getBody().getMobileNumber())) {
-                stringBuilder.append("\nMobile Number missing in the request.");
+                stringBuilder.append("\n").append("Mobile Number missing in the request.");
                 log.info("Mobile Number missing in the request {}", new Date());
                 throw new ExceptionManager("Your Mobile Number is missing in the request.", ResponseCodes.MOBILE.getCode());
             }
 
             if(stringPredicate.test(request.getBody().getAmount())) {
-                stringBuilder.append("\nAmount missing in the request.");
+                stringBuilder.append("\n").append("Amount missing in the request.");
                 log.info("Amount missing in the request {}", new Date());
                 throw new ExceptionManager("Amount is missing in the request.", ResponseCodes.AMOUNT.getCode());
             }
 
+            if(!Helper.isAmountValid(request.getBody().getAmount())) {
+                stringBuilder.append("\n").append("Amount value not valid");
+                log.info("Amount value for the request {} at {} not valid", requestLogModel.getRequestId(), new Date());
+                throw new ExceptionManager("Amount not valid");
+            }
+
+            if(Double.parseDouble(request.getBody().getAmount()) <= 0) {
+                stringBuilder.append("\n").append(String.format("Amount value(%s) not acceptable", request.getBody().getAmount()));
+                log.info("Amount {} not valid for request {} at {}", request.getBody().getAmount(), requestLogModel.getRequestId(), new Date());
+                throw new ExceptionManager("Amount not valid");
+            }
+
             Optional<Subscriptions> person = subscriptionsRepository.findByPersonId(request.getBody().getIdNumber());
             if(person.isEmpty()) {
-                stringBuilder.append(String.format("\nSubscriber %s not found", request.getBody()));
+                stringBuilder.append("\n").append(String.format("Subscriber %s not found", request.getBody()));
                 log.info("Subscriber {} not found.", request);
                 return new Response<>(new Header(String.format("Subscriber %s not found.", request.getBody().getIdNumber()), ResponseCodes.BENE_SPONSOR.getCode()));
             }
