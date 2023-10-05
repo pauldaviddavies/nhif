@@ -137,12 +137,11 @@ public class PaymentsService {
             fundsTransferRequests.setReferenceNumber(General.getReference("FT"));
 
             Optional<FundsTransferRequests> pendingRequest = fundsTransferRequestsRepository.findPendingTransactions(fundsTransferRequests.getMobileNumber(),fundsTransferRequests.getAmount(),fundsTransferRequests.getBeneficiaryIdOrPassportNumber(),fundsTransferRequests.getDescription(),false);
-            if(pendingRequest.isPresent())
-            {
+            if(pendingRequest.isPresent()) {
                 throw new ExceptionManager("Similar Request Pending", ResponseCodes.SIMILAR_REQUEST_PENDING.getCode());
             }
 
-            FundsTransferRequests savedRequest = fundsTransferRequestsRepository.save(fundsTransferRequests);
+            fundsTransferRequestsRepository.save(fundsTransferRequests);
 
             return new Response<>(new Header(true,  ResponseCodes.SUCCESS.getCode(), "Payment initiated successfully."));
 

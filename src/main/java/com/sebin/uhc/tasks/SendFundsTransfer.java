@@ -33,16 +33,19 @@ import java.util.Optional;
 public class SendFundsTransfer
 {
         @Autowired
-        FundsTransferRequestsRepository fundsTransferRequestsRepository;
+        private FundsTransferRequestsRepository fundsTransferRequestsRepository;
 
         @Autowired
         private BeneficiaryRepository beneficiaryRepository;
 
         @Autowired
-        Configs configs;
+        private Configs configs;
 
         @Autowired
-        AccessTokenLoader accessTokenLoader;
+        private AccessTokenLoader accessTokenLoader;
+
+        @Autowired
+        private SubscriptionsRepository subscriptionsRepository;
 
 
 private void submitFundsTransfers() {
@@ -94,6 +97,14 @@ private void submitFundsTransfers() {
                         if (fundsTransferResponse.getStatusCode().equals("0")) {
                                 transferRequests.setProcessingStatus(Statuses.SUCCESS.getStatus());
                                 transferRequests.setKcbFTTransactionID(fundsTransferResponse.getResponsePayload().ftTransactionID);
+                                Optional<Subscriptions> person = subscriptionsRepository.findByPersonId(beneficiary.get().getSubscriptions().getPersonId());
+                                if(person.isPresent()) {
+                                        person.get().getWallet().setAmount(person.get().getWallet().getAmount() + transferRequests.getAmount());
+                                        log.info("Wallet updated for {} at {}", beneficiary.get().getPersonId(), new Date());
+                                } else {
+                                        log.info("Subscription not found yet the request went to bank at {} for {}", new Date(), beneficiary.get().getPersonId());
+                                        transferRequests.setErrorsDescription("Subscription was not found upon response.");
+                                }
                         } else {
                                 transferRequests.setProcessingStatus(Statuses.FAIL.getStatus());
                                 StringBuilder error = new StringBuilder();

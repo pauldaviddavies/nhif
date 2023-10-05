@@ -332,6 +332,12 @@ public class SubscriptionsService {
                 throw new ExceptionManager(String.format("Subscriber %s not found.", request.getBody()), ResponseCodes.SUBSCRIBED.getCode());
             }
 
+            if(person.get().getWallet().getAmount() > 0) {
+                stringBuilder.append("\n").append("Balance has to be zero");
+                log.info("Wallet balance not zero, cannot opt out for subscriber {} at {} for {}", request.getBody(), new Date(), requestLogModel.getRequestId());
+                throw new ExceptionManager("Balance has to be zero to unsubscribe.", ResponseCodes.FAIL.getCode());
+            }
+
             // Check with KCB whether the person should be allowed to un-subscribe; taking into account the loan effect
             Collection<UnSubscriptionsRequests> unSubscriptionsRequests = unsubscriptionRepository.findByPersonIdAndStatus(person.get().getPersonId(), Statuses.PENDING.getStatus());
             if(!unSubscriptionsRequests.isEmpty()) {
