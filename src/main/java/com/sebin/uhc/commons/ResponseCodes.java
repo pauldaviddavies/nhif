@@ -31,6 +31,8 @@ public enum ResponseCodes {
     PIN_MISSING("1020"),//PIN_MISSING found
     SIMILAR_REQUEST_PENDING("1021"),//PIN_MISSING found
     INVALID_AMOUNT("1022"),//PIN_MISSING found
+    DATE_OF_BIRTH("1023"),//DATE_OF_BIRTH missing
+    INVALID_DATE_OF_BIRTH("1024"),//INVALID_DATE_OF_BIRTH
     GENERAL("2000"), // General failure response code
     CONSTRAINT_VIOLATION("3000");
 

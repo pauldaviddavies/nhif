@@ -84,6 +84,19 @@ public class SubscriptionsService {
                 throw new ExceptionManager("First name is missing", ResponseCodes.FIRST_NAME.getCode());
             }
 
+            if(strPredicate.test(request.getBody().getDateOfBirth())) {
+                stringBuilder.append("\n").append("Missing date of birth.");
+                log.info("Validation failed. Missing date of birth {}", new Date());
+                throw new ExceptionManager("Date of birth is missing", ResponseCodes.DATE_OF_BIRTH.getCode());
+            }
+
+            if(request.getBody().getDateOfBirth().length() != 10)
+            {
+                stringBuilder.append("\n").append("Invalid date of birth.");
+                log.info("Validation failed. Invalid date of birth {}", new Date());
+                throw new ExceptionManager("Invalid Date of birth", ResponseCodes.DATE_OF_BIRTH.getCode());
+            }
+
             if(inquireMobile(new Request<>(request.getBody().getMobileNumber()), requestLogModel).getBody().isSubscribed()) {
                 stringBuilder.append("\nMobile number already subscribed.");
                 log.info("Attempt to create an existing mobile number subscription request at {}", new Date());
