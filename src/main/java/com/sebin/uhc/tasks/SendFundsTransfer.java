@@ -57,67 +57,75 @@ private void submitFundsTransfers() {
                         if(beneficiary.isEmpty())
                                 continue;
 
-                        FundTransfer fundTransfer = new FundTransfer();
-                        fundTransfer.setRequestId(transferRequests.getReferenceNumber());
-                        fundTransfer.setAmount(transferRequests.getAmount()+"");
-                        fundTransfer.setNhifNo(transferRequests.getBeneficiaryMemberNumber());
-
-                        String accessToken = new GetToken().getSecret(configs.getApis_consumer_key(),configs.getApis_consumer_secret());
-
-                        log.info("Submitting FT at {}", LocalDateTime.now());
-                        transferRequests.setDateSentToCB(LocalDateTime.now());
-                        String request = new Gson().toJson(fundTransfer);
-                        transferRequests.setRequest(request);
-                        String ft_resp = General.send_request(transferRequests.getReferenceNumber(), configs.getFT_request_url(), request, AppConstants.APPLICATION_JSON, accessToken);
-                        transferRequests.setResponseDate(LocalDateTime.now());
-                        transferRequests.setResponse(ft_resp);
-                        log.info("FT response {} at {}", ft_resp, new Date());
-
-                        if (ft_resp.isBlank()) {
-                                log.info("Could not get FT response at {}", new Date());
-                                transferRequests.setSendToKcbRetries(transferRequests.getSendToKcbRetries()+1);
-                                fundsTransferRequestsRepository.save(transferRequests);
-                                continue;
-                        }
-
-                        FundsTransferResponse fundsTransferResponse = new Gson().fromJson(ft_resp, FundsTransferResponse.class);
-                        if (fundsTransferResponse == null) {
-                                log.info("Could not get FT response at {}", new Date());
-                                transferRequests.setSendToKcbRetries(transferRequests.getSendToKcbRetries()+1);
-                                fundsTransferRequestsRepository.save(transferRequests);
-                                continue;
-                        }
-
-                        transferRequests.setResponseCode(fundsTransferResponse.getStatusCode());
-                        transferRequests.setStatusMessage(fundsTransferResponse.getStatusMessage());
-                        transferRequests.setStatusDescription(fundsTransferResponse.getStatusDescription());
-                        transferRequests.setProcessed(true);
-                        transferRequests.setSentToKcb(true);
-
-                        if (fundsTransferResponse.getStatusCode().equals("0")) {
-                                transferRequests.setProcessingStatus(Statuses.SUCCESS.getStatus());
-                                transferRequests.setKcbFTTransactionID(fundsTransferResponse.getResponsePayload().ftTransactionID);
-                                Optional<Subscriptions> person = subscriptionsRepository.findByPersonId(beneficiary.get().getSubscriptions().getPersonId());
-                                if(person.isPresent()) {
-                                        person.get().getWallet().setAmount(person.get().getWallet().getAmount() + transferRequests.getAmount());
-                                        log.info("Wallet updated for {} at {}", beneficiary.get().getPersonId(), new Date());
+                        if(beneficiary.get().getSubscriptions().getWallet().getAmount() > 0) {
+                                if(transferRequests.getAmount() > beneficiary.get().getSubscriptions().getWallet().getAmount()) {
+                                        log.info("Amount({}) requested for {} at {} more than the wallet balance({}) for {}",
+                                                transferRequests.getAmount(), beneficiary.get().getPersonId(), new Date(), beneficiary.get().getSubscriptions().getWallet().getAmount(), beneficiary.get().getSubscriptions().getPersonId());
                                 } else {
-                                        log.info("Subscription not found yet the request went to bank at {} for {}", new Date(), beneficiary.get().getPersonId());
-                                        transferRequests.setErrorsDescription("Subscription was not found upon response.");
+                                        FundTransfer fundTransfer = new FundTransfer();
+                                        fundTransfer.setRequestId(transferRequests.getReferenceNumber());
+                                        fundTransfer.setAmount(transferRequests.getAmount()+"");
+                                        fundTransfer.setNhifNo(transferRequests.getBeneficiaryMemberNumber());
+
+                                        String accessToken = new GetToken().getSecret(configs.getApis_consumer_key(),configs.getApis_consumer_secret());
+
+                                        log.info("Submitting FT at {}", LocalDateTime.now());
+                                        transferRequests.setDateSentToCB(LocalDateTime.now());
+                                        String request = new Gson().toJson(fundTransfer);
+                                        transferRequests.setRequest(request);
+                                        String ft_resp = General.send_request(transferRequests.getReferenceNumber(), configs.getFT_request_url(), request, AppConstants.APPLICATION_JSON, accessToken);
+                                        transferRequests.setResponseDate(LocalDateTime.now());
+                                        transferRequests.setResponse(ft_resp);
+                                        log.info("FT response {} at {}", ft_resp, new Date());
+
+                                        if (ft_resp.isBlank()) {
+                                                log.info("Could not get FT response at {}", new Date());
+                                                transferRequests.setSendToKcbRetries(transferRequests.getSendToKcbRetries()+1);
+                                                fundsTransferRequestsRepository.save(transferRequests);
+                                                continue;
+                                        }
+
+                                        FundsTransferResponse fundsTransferResponse = new Gson().fromJson(ft_resp, FundsTransferResponse.class);
+                                        if (fundsTransferResponse == null) {
+                                                log.info("Could not get FT response at {}", new Date());
+                                                transferRequests.setSendToKcbRetries(transferRequests.getSendToKcbRetries()+1);
+                                                fundsTransferRequestsRepository.save(transferRequests);
+                                                continue;
+                                        }
+
+                                        transferRequests.setResponseCode(fundsTransferResponse.getStatusCode());
+                                        transferRequests.setStatusMessage(fundsTransferResponse.getStatusMessage());
+                                        transferRequests.setStatusDescription(fundsTransferResponse.getStatusDescription());
+                                        transferRequests.setProcessed(true);
+                                        transferRequests.setSentToKcb(true);
+
+                                        if (fundsTransferResponse.getStatusCode().equals("0")) {
+                                                transferRequests.setProcessingStatus(Statuses.SUCCESS.getStatus());
+                                                transferRequests.setKcbFTTransactionID(fundsTransferResponse.getResponsePayload().ftTransactionID);
+                                                Optional<Subscriptions> person = subscriptionsRepository.findByPersonId(beneficiary.get().getSubscriptions().getPersonId());
+                                                if(person.isPresent()) {
+                                                        person.get().getWallet().setAmount(person.get().getWallet().getAmount() + transferRequests.getAmount());
+                                                        log.info("Wallet updated for {} at {}", beneficiary.get().getPersonId(), new Date());
+                                                } else {
+                                                        log.info("Subscription not found yet the request went to bank at {} for {}", new Date(), beneficiary.get().getPersonId());
+                                                        transferRequests.setErrorsDescription("Subscription was not found upon response.");
+                                                }
+                                        } else {
+                                                transferRequests.setProcessingStatus(Statuses.FAIL.getStatus());
+                                                StringBuilder error = new StringBuilder();
+                                                fundsTransferResponse.errors.forEach(s -> error.append("\n").append(s));
+                                                transferRequests.setErrorsDescription(error.toString());
+                                        }
+                                        fundsTransferRequestsRepository.save(transferRequests);
                                 }
                         } else {
-                                transferRequests.setProcessingStatus(Statuses.FAIL.getStatus());
-                                StringBuilder error = new StringBuilder();
-                                fundsTransferResponse.errors.forEach(s -> error.append("\n").append(s));
-                                transferRequests.setErrorsDescription(error.toString());
+                                log.info("Wallet balance not enough to initiate the payment request for beneficiaries at {}", new Date());
                         }
-                        fundsTransferRequestsRepository.save(transferRequests);
                 }
                 catch (Exception ex) {
                         log.error("Exception while doing funds transfer at {} for request Id {}", new Date(), transferRequests.getReferenceNumber());
                         transferRequests.setSendToKcbRetries(transferRequests.getSendToKcbRetries()+1);
                         fundsTransferRequestsRepository.save(transferRequests);
-                        System.out.println("Error sending funds transfer record "+transferRequests.getId());
                         ex.printStackTrace();
                 }
         }
