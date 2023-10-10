@@ -51,7 +51,7 @@ public class ReportingService {
             if(stringPredicate.test(request.getBody())) {
                 stringBuilder.append("\n").append("Missing national Id, passport, mobile number, criterion or request type");
                 log.info("Could not generate mini statement, no subscriber parameter was provided at {}", new Date());
-                throw new ExceptionManager("Missing national Id, passport or mobile number in the request.", ResponseCodes.NOT_FOUND.getCode());
+                throw new ExceptionManager("Missing national Id, passport or mobile number in the request.", ResponseCodes.ID_PASSPORT_MISSING.getCode());
             }
 
             Optional<Subscriptions> subscriptions = subscriptionsRepository.findByPersonId(request.getBody().getIdNumber());
@@ -59,7 +59,7 @@ public class ReportingService {
             if(subscriptions.isEmpty()) {
                 stringBuilder.append("\n").append("Subscriber not found.");
                 log.info("Subscriber {} not found, cannot run statement at {}", request.getBody().getIdNumber(), new Date());
-                throw new ExceptionManager(String.format("Subscriber %s not found, cannot run statement.", request.getBody().getIdNumber()), ResponseCodes.NOT_FOUND.getCode());
+                throw new ExceptionManager(String.format("Subscriber %s not found, cannot run statement.", request.getBody().getIdNumber()), ResponseCodes.ID_PASSPORT_MISSING.getCode());
             }
 
             if(subscriptions.get().getWallet() == null) {

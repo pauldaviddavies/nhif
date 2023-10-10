@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Data
 public class Header {
     private boolean success = false;
-    private String responseCode = ResponseCodes.GENERAL.getCode();
+    private String responseCode = ResponseCodes.GENERAL_FAILURE.getCode();
     private String message = Messages.GENERAL_FAILURE;
 
     public Header(final String message) {

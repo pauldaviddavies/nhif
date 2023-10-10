@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
             message = response.get("message");
             code = response.get("code");
         } else {
-            code = ResponseCodes.GENERAL.getCode();
+            code = ResponseCodes.GENERAL_FAILURE.getCode();
             message = "Sorry, something went wrong.";
         }
 
@@ -47,7 +47,7 @@ public class GlobalExceptionHandler {
             message = response.get("message");
             code = response.get("code");
         } else {
-            code = ResponseCodes.GENERAL.getCode();
+            code = ResponseCodes.GENERAL_FAILURE.getCode();
             message = "Sorry, something went wrong.";
         }
 
@@ -57,7 +57,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = ConstraintViolationException.class)
     public Response<?> exception(ConstraintViolationException exception) {
         LOGGER.error(exception.getMessage());
-        return new Response<>(new Header("Sorry, we can not complete the request at this time", ResponseCodes.CONSTRAINT_VIOLATION.getCode()));
+        return new Response<>(new Header("Sorry, we can not complete the request at this time", ResponseCodes.UNACCEPTABLE_REQUEST_FORMAT.getCode()));
     }
 
     private Map<String, String> returnCodeAndMessageFrom(String message, int index) {

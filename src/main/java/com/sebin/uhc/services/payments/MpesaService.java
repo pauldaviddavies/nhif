@@ -70,19 +70,19 @@ public class MpesaService {
             if(stringPredicate.test(request.getBody().getIdNumber())) {
                 stringBuilder.append("\n").append("ID Number missing in the request.");
                 log.info("ID Number missing in the request {}", new Date());
-                throw new ExceptionManager("Your ID Number is missing in the request.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("Your ID Number is missing in the request.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(stringPredicate.test(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Mobile Number missing in the request.");
                 log.info("Mobile Number missing in the request {}", new Date());
-                throw new ExceptionManager("Your Mobile Number is missing in the request.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("Your Mobile Number is missing in the request.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(stringPredicate.test(request.getBody().getAmount())) {
                 stringBuilder.append("\n").append("Amount missing in the request.");
                 log.info("Amount missing in the request {}", new Date());
-                throw new ExceptionManager("Amount is missing in the request.", ResponseCodes.AMOUNT.getCode());
+                throw new ExceptionManager("Amount is missing in the request.", ResponseCodes.AMOUNT_MISSING.getCode());
             }
 
             if(!Helper.isAmountValid(request.getBody().getAmount())) {
@@ -101,7 +101,7 @@ public class MpesaService {
             if(person.isEmpty()) {
                 stringBuilder.append("\n").append(String.format("Subscriber %s not found", request.getBody()));
                 log.info("Subscriber {} not found.", request);
-                return new Response<>(new Header(String.format("Subscriber %s not found.", request.getBody().getIdNumber()), ResponseCodes.BENE_SPONSOR.getCode()));
+                return new Response<>(new Header(String.format("Subscriber %s not found.", request.getBody().getIdNumber()), ResponseCodes.BENEFICIARY_OR_SPONSOR_MISSING.getCode()));
             }
 
             MpesaRequests mpesaRequests = new MpesaRequests();
@@ -279,12 +279,12 @@ public class MpesaService {
             Predicate<String> requestPredicate = String::isBlank;
             if(requestPredicate.test(request.getBody().getIdNumber())) {
                 stringBuilder.append("\n").append("ID number missing.");
-                throw new ExceptionManager("ID Number is missing",ResponseCodes.ID_PASSPORT.getCode());
+                throw new ExceptionManager("ID Number is missing",ResponseCodes.ID_PASSPORT_MISSING.getCode());
             }
 
             if(requestPredicate.test(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Mobile number missing.");
-                throw new ExceptionManager("Mobile Number is missing",ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("Mobile Number is missing",ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             Optional<Subscriptions> subscriptions = subscriptionsRepository.findByPersonId(request.getBody().getIdNumber());

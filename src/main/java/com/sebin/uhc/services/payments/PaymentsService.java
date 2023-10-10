@@ -1,26 +1,19 @@
 package com.sebin.uhc.services.payments;
 
-import com.google.gson.Gson;
 import com.sebin.uhc.commons.*;
 import com.sebin.uhc.entities.onboarding.Beneficiaries;
 import com.sebin.uhc.entities.onboarding.Subscriptions;
 import com.sebin.uhc.entities.payments.FundsTransferRequests;
-import com.sebin.uhc.entities.payments.MpesaRequests;
 import com.sebin.uhc.exceptions.ExceptionManager;
 import com.sebin.uhc.models.PaymentPurpose;
 import com.sebin.uhc.models.RequestLogModel;
-import com.sebin.uhc.models.TokenTypes;
 import com.sebin.uhc.models.requests.onboarding.Request;
 import com.sebin.uhc.models.requests.payments.FundsTransferRequest;
-import com.sebin.uhc.models.requests.payments.Mpesa;
-import com.sebin.uhc.models.requests.payments.STKPush;
 import com.sebin.uhc.models.responses.onboarding.Header;
 import com.sebin.uhc.models.responses.onboarding.Response;
-import com.sebin.uhc.models.responses.payments.MpesaNotification;
 import com.sebin.uhc.repositories.onboarding.BeneficiaryRepository;
 import com.sebin.uhc.repositories.onboarding.SubscriptionsRepository;
 import com.sebin.uhc.repositories.payments.FundsTransferRequestsRepository;
-import com.sebin.uhc.repositories.payments.MpesaRequestsRepository;
 import com.sebin.uhc.services.onboarding.RequestLogTrailService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.EnumUtils;
@@ -68,19 +61,19 @@ public class PaymentsService {
             if(stringPredicate.test(request.getBody().getIdNumber())) {
                 stringBuilder.append("\n").append("ID Number missing in the request.");
                 log.info("ID Number missing in the request {}", new Date());
-                throw new ExceptionManager("Your ID Number is missing in the request.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("Your ID Number is missing in the request.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(stringPredicate.test(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Mobile Number missing in the request.");
                 log.info("Mobile Number missing in the request {}", new Date());
-                throw new ExceptionManager("Your Mobile Number is missing in the request.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("Your Mobile Number is missing in the request.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(stringPredicate.test(request.getBody().getAmount())) {
                 stringBuilder.append("\n").append("Amount missing in the request.");
                 log.info("Amount missing in the request {}", new Date());
-                throw new ExceptionManager("Amount is missing in the request.", ResponseCodes.AMOUNT.getCode());
+                throw new ExceptionManager("Amount is missing in the request.", ResponseCodes.AMOUNT_MISSING.getCode());
             }
 
             if(!Helper.isAmountValid(request.getBody().getAmount()) || Double.parseDouble(request.getBody().getAmount()) <= 0) {
@@ -98,7 +91,7 @@ public class PaymentsService {
             if(stringPredicate.test(request.getBody().getBeneficiaryIdOrPassportNumber())) {
                 stringBuilder.append("\n").append("Beneficiary Id or passport missing in the request.");
                 log.info("Beneficiary Id or passport missing in the request {}", new Date());
-                throw new ExceptionManager("Beneficiary Id or passport is missing in the request.", ResponseCodes.BENEFICIARY_ID.getCode());
+                throw new ExceptionManager("Beneficiary Id or passport is missing in the request.", ResponseCodes.BENEFICIARY_ID_MISSING.getCode());
             }
 
             if(stringPredicate.test(request.getBody().getPIN())) {
@@ -111,7 +104,7 @@ public class PaymentsService {
             if(person.isEmpty()) {
                 stringBuilder.append("\n").append(String.format("Subscriber %s not found", request.getBody()));
                 log.info("Subscriber {} not found.", request);
-                return new Response<>(new Header(String.format("Subscriber %s not found.", request.getBody().getIdNumber()), ResponseCodes.BENE_SPONSOR.getCode()));
+                return new Response<>(new Header(String.format("Subscriber %s not found.", request.getBody().getIdNumber()), ResponseCodes.BENEFICIARY_OR_SPONSOR_MISSING.getCode()));
             }
 
             if(person.get().getWallet().getAmount() < Double.parseDouble(request.getBody().getAmount()))
@@ -139,19 +132,19 @@ public class PaymentsService {
                 if (beneficiary.get().getSubscriptions().getId() != person.get().getId()) {
                     stringBuilder.append("\n").append("Sponsor Beneficiary not found");
                     log.info("Sponsor Beneficiary with Id {} for the sponsor with phone number {} was not found. {}", request.getBody().getBeneficiaryIdOrPassportNumber(), request.getBody().getMobileNumber(), new Date());
-                    return new Response<>(new Header(String.format("Sponsor Beneficiary with Id %s was not found.", request.getBody().getBeneficiaryIdOrPassportNumber()), ResponseCodes.BENE_SPONSOR.getCode()));
+                    return new Response<>(new Header(String.format("Sponsor Beneficiary with Id %s was not found.", request.getBody().getBeneficiaryIdOrPassportNumber()), ResponseCodes.BENEFICIARY_OR_SPONSOR_MISSING.getCode()));
                 }
 
                 if (beneficiary.get().getMemberNumber() == null || beneficiary.get().getMemberNumber().equals("")) {
                     stringBuilder.append("\n").append("Beneficiary has no member number");
                     log.info("Beneficiary  {} has no member number", request.getBody().getBeneficiaryIdOrPassportNumber());
-                    return new Response<>(new Header(String.format("Sponsor Beneficiary with Id %s has no member number.", request.getBody().getBeneficiaryIdOrPassportNumber()), ResponseCodes.MEMBER_NUMBER.getCode()));
+                    return new Response<>(new Header(String.format("Sponsor Beneficiary with Id %s has no member number.", request.getBody().getBeneficiaryIdOrPassportNumber()), ResponseCodes.MEMBER_NUMBER_MISSING.getCode()));
                 }
             }
             else
             {
                 System.out.println("beneficiary "+request.getBody().getBeneficiaryIdOrPassportNumber()+" was not found at "+LocalDateTime.now());
-                throw new ExceptionManager("Beneficiary not found.", ResponseCodes.BENE_SPONSOR.getCode());
+                throw new ExceptionManager("Beneficiary not found.", ResponseCodes.BENEFICIARY_OR_SPONSOR_MISSING.getCode());
             }
 
             if(!PasswordHandler.validatePassword(request.getBody().getPIN(),person.get().getPassword())) {

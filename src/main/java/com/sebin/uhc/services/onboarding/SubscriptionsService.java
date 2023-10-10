@@ -7,7 +7,6 @@ import com.sebin.uhc.entities.onboarding.Subscriptions;
 import com.sebin.uhc.entities.onboarding.UnSubscriptionsRequests;
 import com.sebin.uhc.exceptions.ExceptionManager;
 import com.sebin.uhc.models.Gender;
-import com.sebin.uhc.models.PaymentPurpose;
 import com.sebin.uhc.models.RequestLogModel;
 import com.sebin.uhc.models.Subscription;
 import com.sebin.uhc.models.requests.onboarding.ChangePin;
@@ -60,37 +59,37 @@ public class SubscriptionsService {
             if(subscriptionPredicate.test(request.getBody())) {
                 stringBuilder.append("\n").append("Null or empty request body.");
                 log.info("Validation failed fot the requires. Request is null or empty {}", new Date());
-                throw new ExceptionManager("Basic details missing, cannot proceed.", ResponseCodes.BASIC_DETAILS.getCode());
+                throw new ExceptionManager("Basic details missing, cannot proceed.", ResponseCodes.BASIC_DETAILS_MISSING.getCode());
             }
 
             if(strPredicate.test(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Missing mobile number.");
                 log.info("Validation failed. Missing mobile number {}", new Date());
-                throw new ExceptionManager("Mobile number is missing.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("Mobile number is missing.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(Helper.isPhoneNumberValid(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Wrong mobile number format.");
                 log.info("Validation failed. Wrong mobile number format {}", new Date());
-                throw new ExceptionManager("Mobile number must be in the format +254...", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
+                throw new ExceptionManager("Mobile number must be in the format +254...", ResponseCodes.INVALID_MOBILE_NUMBER_FORMAT.getCode());
             }
 
             if(strPredicate.test(request.getBody().getPersonId())) {
                 stringBuilder.append("\n").append("Missing national Id or passport.");
                 log.info("Validation failed. Missing national Id or passport {}", new Date());
-                throw new ExceptionManager("National Id or passport missing.", ResponseCodes.ID_PASSPORT.getCode());
+                throw new ExceptionManager("National Id or passport missing.", ResponseCodes.ID_PASSPORT_MISSING.getCode());
             }
 
             if(strPredicate.test(request.getBody().getFirstName())) {
                 stringBuilder.append("\n").append("Missing first name.");
                 log.info("Validation failed. Missing first name {}", new Date());
-                throw new ExceptionManager("First name is missing", ResponseCodes.FIRST_NAME.getCode());
+                throw new ExceptionManager("First name is missing", ResponseCodes.FIRST_NAME_MISSING.getCode());
             }
 
             if(strPredicate.test(request.getBody().getDateOfBirth())) {
                 stringBuilder.append("\n").append("Missing date of birth.");
                 log.info("Validation failed. Missing date of birth {}", new Date());
-                throw new ExceptionManager("Date of birth is missing", ResponseCodes.DATE_OF_BIRTH.getCode());
+                throw new ExceptionManager("Date of birth is missing", ResponseCodes.DATE_OF_BIRTH_MISSING.getCode());
             }
 
             if(strPredicate.test(request.getBody().getGender())) {
@@ -110,19 +109,19 @@ public class SubscriptionsService {
             {
                 stringBuilder.append("\n").append("Invalid date of birth.");
                 log.info("Validation failed. Invalid date of birth {}", new Date());
-                throw new ExceptionManager("Invalid Date of birth", ResponseCodes.DATE_OF_BIRTH.getCode());
+                throw new ExceptionManager("Invalid Date of birth", ResponseCodes.DATE_OF_BIRTH_MISSING.getCode());
             }
 
             if(inquireMobile(new Request<>(request.getBody().getMobileNumber()), requestLogModel).getBody().isSubscribed()) {
                 stringBuilder.append("\nMobile number already subscribed.");
                 log.info("Attempt to create an existing mobile number subscription request at {}", new Date());
-                throw new ExceptionManager(String.format("Mobile number %s already subscribed.", request.getBody().getMobileNumber()), ResponseCodes.SUBSCRIBED.getCode());
+                throw new ExceptionManager(String.format("Mobile number %s already subscribed.", request.getBody().getMobileNumber()), ResponseCodes.SUBSCRIBER_ALREADY_EXISTS.getCode());
             }
 
             if(inquireId(new Request<>(request.getBody().getPersonId()), requestLogModel).getBody().isSubscribed()) {
                 stringBuilder.append("\n").append("National Id or passport already subscribed.");
                 log.info("National Id or Passport '{}' already subscribed, cannot subscribe again.", request.getBody().getPersonId());
-                throw new ExceptionManager(String.format("National Id or Passport %s is already subscribed.", request.getBody().getPersonId()), ResponseCodes.ID_PASSPORT.getCode());
+                throw new ExceptionManager(String.format("National Id or Passport %s is already subscribed.", request.getBody().getPersonId()), ResponseCodes.ID_PASSPORT_MISSING.getCode());
             }
 
             if(request.getBody().isNHIFMember())
@@ -130,7 +129,7 @@ public class SubscriptionsService {
                 if (strPredicate.test(request.getBody().getMemberNumber())) {
                     stringBuilder.append("\n").append("Missing NHIF number");
                     log.info("Beneficiary request missing NHIF member number {} for request {}", new Date(), request.getHeader().getRequestId());
-                    throw new ExceptionManager("Member number is missing.", ResponseCodes.MEMBER_NUMBER.getCode());
+                    throw new ExceptionManager("Member number is missing.", ResponseCodes.MEMBER_NUMBER_MISSING.getCode());
                 }
             }
 
@@ -199,13 +198,13 @@ public class SubscriptionsService {
             if(stringPredicate.test(request.getBody())) {
                 stringBuilder.append("\nMobile number not found in the request.");
                 log.info("Could not find mobile number in the request {}", new Date());
-                throw new ExceptionManager("Mobile number required.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("Mobile number required.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(Helper.isPhoneNumberValid(request.getBody())) {
                 stringBuilder.append("\n").append("Mobile number not valid");
                 log.info("Mobile number not valid for request id {}", request.getHeader().getRequestId());
-                throw new ExceptionManager("Mobile number not valid", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
+                throw new ExceptionManager("Mobile number not valid", ResponseCodes.INVALID_MOBILE_NUMBER_FORMAT.getCode());
             }
 
             Optional<Subscriptions> person = repository.findByMobileNumber(request.getBody());
@@ -257,19 +256,19 @@ public class SubscriptionsService {
             if(stringPredicate.test(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Mobile number not found in the request.");
                 log.info("Could not find mobile number in the request {}", new Date());
-                throw new ExceptionManager("Mobile number required.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("Mobile number required.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(Helper.isPhoneNumberValid(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Mobile number not valid");
                 log.info("Mobile number not valid for request id {}", request.getHeader().getRequestId());
-                throw new ExceptionManager("Mobile number not valid", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
+                throw new ExceptionManager("Mobile number not valid", ResponseCodes.INVALID_MOBILE_NUMBER_FORMAT.getCode());
             }
 
             if(stringPredicate.test(request.getBody().getIdNumber())) {
                 stringBuilder.append("\n").append("Missing national Id or passport");
                 log.info("Missing national Id or passport in the request {} at {}", request.getHeader().getRequestId(), new Date());
-                throw new ExceptionManager("National Id or passport missing in the request", ResponseCodes.ID_PASSPORT.getCode());
+                throw new ExceptionManager("National Id or passport missing in the request", ResponseCodes.ID_PASSPORT_MISSING.getCode());
             }
 
             Optional<Subscriptions> person = repository.findByMobileNumber(request.getBody().getMobileNumber());
@@ -319,7 +318,7 @@ public class SubscriptionsService {
             if(stringPredicate.test(request.getBody())) {
                 stringBuilder.append("\n").append("Missing national Id or passport.");
                 log.info("National Id or passport not provided {}", new Date());
-                throw new ExceptionManager("National Id or passport not provided.", ResponseCodes.ID_PASSPORT.getCode());
+                throw new ExceptionManager("National Id or passport not provided.", ResponseCodes.ID_PASSPORT_MISSING.getCode());
             }
 
             Optional<Subscriptions> person = repository.findByPersonId(request.getBody());
@@ -360,14 +359,14 @@ public class SubscriptionsService {
             if(stringPredicate.test(request)) {
                 stringBuilder.append("\n").append("Missing national Id or passport.");
                 log.info("National Id or passport missing in the request to unsubscribe {}", new Date());
-                throw new ExceptionManager( "National Id or passport is required to unsubscribe", ResponseCodes.ID_PASSPORT.getCode());
+                throw new ExceptionManager( "National Id or passport is required to unsubscribe", ResponseCodes.ID_PASSPORT_MISSING.getCode());
             }
 
             Optional<Subscriptions> person = repository.findByMobileNumber(request.getBody());
             if(person.isEmpty()) {
                 stringBuilder.append("\n").append(String.format("Subscriber %s not found", request.getBody()));
                 log.info("Subscriber ({}) not found.", request);
-                throw new ExceptionManager(String.format("Subscriber %s not found.", request.getBody()), ResponseCodes.SUBSCRIBED.getCode());
+                throw new ExceptionManager(String.format("Subscriber %s not found.", request.getBody()), ResponseCodes.SUBSCRIBER_ALREADY_EXISTS.getCode());
             }
 
             if(person.get().getWallet().getAmount() > 0) {
@@ -380,7 +379,7 @@ public class SubscriptionsService {
             Collection<UnSubscriptionsRequests> unSubscriptionsRequests = unsubscriptionRepository.findByPersonIdAndStatus(person.get().getPersonId(), Statuses.PENDING.getStatus());
             if(!unSubscriptionsRequests.isEmpty()) {
                 stringBuilder.append("\n").append("Similar request pending.");
-                return new Response<>(new Header("There is a similar request pending.", ResponseCodes.DUPLICATE.getCode()));
+                return new Response<>(new Header("There is a similar request pending.", ResponseCodes.SIMILAR_REQUEST_PENDING.getCode()));
             }
 
             UnSubscriptionsRequests unsubscriptionsRequests = new UnSubscriptionsRequests(person.get().getPersonId(), "KCB", "callbackURl", LocalDateTime.now(), LocalDateTime.now(), Statuses.REMOVED.getStatus(), "requestId");
@@ -432,43 +431,43 @@ public class SubscriptionsService {
             if(pinPredicate.test(request.getBody())) {
                 stringBuilder.append("\n").append("Null or empty request body.");
                 log.info("Validation failed for the requires. Request is null or empty {}", new Date());
-                throw new ExceptionManager("Basic details missing, cannot proceed.", ResponseCodes.BASIC_DETAILS.getCode());
+                throw new ExceptionManager("Basic details missing, cannot proceed.", ResponseCodes.BASIC_DETAILS_MISSING.getCode());
             }
 
             if(strPredicate.test(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Missing mobile number.");
                 log.info("Validation failed. Missing mobile number {}", new Date());
-                throw new ExceptionManager("Mobile number is missing.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("Mobile number is missing.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(Helper.isPhoneNumberValid(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Wrong mobile number format.");
                 log.info("Validation failed. Wrong mobile number format {}", new Date());
-                throw new ExceptionManager("Mobile number must be in the format +254...", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
+                throw new ExceptionManager("Mobile number must be in the format +254...", ResponseCodes.INVALID_MOBILE_NUMBER_FORMAT.getCode());
             }
 
             if(strPredicate.test(request.getBody().getPIN())) {
                 stringBuilder.append("\n").append("Missing PIN.");
                 log.info("Validation failed. Missing PIN number {}", new Date());
-                throw new ExceptionManager("PIN is missing.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("PIN is missing.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(!Helper.isPinFormatValid(request.getBody().getPIN())) {
                 stringBuilder.append("\n").append("PIN length must be greater than four characters without spaces.");
                 log.info("Validation failed. PIN length must be greater than four characters without spaces {}", new Date());
-                throw new ExceptionManager("PIN length must be greater than four characters without spaces", ResponseCodes.PIN.getCode());
+                throw new ExceptionManager("PIN length must be greater than four characters without spaces", ResponseCodes.PIN_FORMAT_INVALID.getCode());
             }
 
             if(strPredicate.test(request.getBody().getConfirmPIN())) {
                 stringBuilder.append("\n").append("Missing ConfirmPIN.");
                 log.info("Validation failed. Missing ConfirmPIN {}", new Date());
-                throw new ExceptionManager("ConfirmPIN is missing.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("ConfirmPIN is missing.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(!Helper.isPinFormatValid(request.getBody().getConfirmPIN())) {
                 stringBuilder.append("\n").append("Confirmation PIN length must be greater than four characters.");
                 log.info("Validation failed. confirmation PIN length must be greater than four characters. {}", new Date());
-                throw new ExceptionManager("confirmation PIN length must be greater than four characters.", ResponseCodes.PIN.getCode());
+                throw new ExceptionManager("confirmation PIN length must be greater than four characters.", ResponseCodes.PIN_FORMAT_INVALID.getCode());
             }
 
             Optional<Subscriptions> person = repository.findByMobileNumber(request.getBody().getMobileNumber());
@@ -523,31 +522,31 @@ public class SubscriptionsService {
             if(pinPredicate.test(request.getBody())) {
                 stringBuilder.append("\n").append("Null or empty request body.");
                 log.info("Validation failed for the requires. Request is null or empty {}", new Date());
-                throw new ExceptionManager("Basic details missing, cannot proceed.", ResponseCodes.BASIC_DETAILS.getCode());
+                throw new ExceptionManager("Basic details missing, cannot proceed.", ResponseCodes.BASIC_DETAILS_MISSING.getCode());
             }
 
             if(strPredicate.test(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Missing mobile number.");
                 log.info("Validation failed. Missing mobile number {}", new Date());
-                throw new ExceptionManager("Mobile number is missing.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("Mobile number is missing.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(Helper.isPhoneNumberValid(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Wrong mobile number format.");
                 log.info("Validation failed. Wrong mobile number format {}", new Date());
-                throw new ExceptionManager("Mobile number must be in the format +254...", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
+                throw new ExceptionManager("Mobile number must be in the format +254...", ResponseCodes.INVALID_MOBILE_NUMBER_FORMAT.getCode());
             }
 
             if(strPredicate.test(request.getBody().getPIN())) {
                 stringBuilder.append("\n").append("Missing PIN.");
                 log.info("Validation failed. Missing PIN number {}", new Date());
-                throw new ExceptionManager("PIN is missing.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("PIN is missing.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(!Helper.isPinFormatValid(request.getBody().getPIN())) {
                 stringBuilder.append("\n").append("PIN length must be greater than four characters without spaces.");
                 log.info("Validation failed. PIN length must be greater than four characters without spaces {}", new Date());
-                throw new ExceptionManager("PIN length must be greater than four characters without spaces", ResponseCodes.PIN.getCode());
+                throw new ExceptionManager("PIN length must be greater than four characters without spaces", ResponseCodes.PIN_FORMAT_INVALID.getCode());
             }
 
 
@@ -597,55 +596,55 @@ public class SubscriptionsService {
             if(pinPredicate.test(request.getBody())) {
                 stringBuilder.append("\n").append("Null or empty request body.");
                 log.info("Validation failed for the requires. Request is null or empty {}", new Date());
-                throw new ExceptionManager("Basic details missing, cannot proceed.", ResponseCodes.BASIC_DETAILS.getCode());
+                throw new ExceptionManager("Basic details missing, cannot proceed.", ResponseCodes.BASIC_DETAILS_MISSING.getCode());
             }
 
             if(strPredicate.test(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Missing mobile number.");
                 log.info("Validation failed. Missing mobile number {}", new Date());
-                throw new ExceptionManager("Mobile number is missing.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("Mobile number is missing.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(Helper.isPhoneNumberValid(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Wrong mobile number format.");
                 log.info("Validation failed. Wrong mobile number format {}", new Date());
-                throw new ExceptionManager("Mobile number must be in the format +254...", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
+                throw new ExceptionManager("Mobile number must be in the format +254...", ResponseCodes.INVALID_MOBILE_NUMBER_FORMAT.getCode());
             }
 
             if(strPredicate.test(request.getBody().getPIN())) {
                 stringBuilder.append("\n").append("Missing PIN.");
                 log.info("Validation failed. Missing PIN number {}", new Date());
-                throw new ExceptionManager("PIN is missing.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("PIN is missing.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(!Helper.isPinFormatValid(request.getBody().getPIN())) {
                 stringBuilder.append("\n").append("PIN length must be greater than four characters without spaces.");
                 log.info("Validation failed. PIN length must be greater than four characters without spaces {}", new Date());
-                throw new ExceptionManager("PIN length must be greater than four characters without spaces", ResponseCodes.PIN.getCode());
+                throw new ExceptionManager("PIN length must be greater than four characters without spaces", ResponseCodes.PIN_FORMAT_INVALID.getCode());
             }
 
             if(strPredicate.test(request.getBody().getNewPIN())) {
                 stringBuilder.append("\n").append("Missing ConfirmPIN.");
                 log.info("Validation failed. Missing NewPIN {}", new Date());
-                throw new ExceptionManager("New pin is missing.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("New pin is missing.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(!Helper.isPinFormatValid(request.getBody().getNewPIN())) {
                 stringBuilder.append("\n").append("NewPIN length must be greater than four characters.");
                 log.info("Validation failed. NewPIN length must be greater than four characters. {}", new Date());
-                throw new ExceptionManager("NewPIN length must be greater than four characters.", ResponseCodes.PIN.getCode());
+                throw new ExceptionManager("NewPIN length must be greater than four characters.", ResponseCodes.PIN_FORMAT_INVALID.getCode());
             }
 
             if(strPredicate.test(request.getBody().getConfirmNewPIN())) {
                 stringBuilder.append("\n").append("Missing ConfirmPIN.");
                 log.info("Validation failed. Missing ConfirmNewPIN {}", new Date());
-                throw new ExceptionManager("ConfirmNewPIN is missing.", ResponseCodes.MOBILE.getCode());
+                throw new ExceptionManager("ConfirmNewPIN is missing.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
             if(!Helper.isPinFormatValid(request.getBody().getConfirmNewPIN())) {
                 stringBuilder.append("\n").append("ConfirmNewPIN length must be greater than four characters.");
                 log.info("Validation failed. ConfirmNewPIN length must be greater than four characters. {}", new Date());
-                throw new ExceptionManager("ConfirmNewPIN length must be greater than four characters.", ResponseCodes.PIN.getCode());
+                throw new ExceptionManager("ConfirmNewPIN length must be greater than four characters.", ResponseCodes.PIN_FORMAT_INVALID.getCode());
             }
 
             Optional<Subscriptions> person = repository.findByMobileNumber(request.getBody().getMobileNumber());

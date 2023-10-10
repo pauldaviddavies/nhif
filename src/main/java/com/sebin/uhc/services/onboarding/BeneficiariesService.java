@@ -56,31 +56,31 @@ public class BeneficiariesService {
             if (stringPredicate.test(request.getBody().getMemberNumber())) {
                 stringBuilder.append("\n").append("Missing NHIF number");
                 log.info("Beneficiary request missing NHIF member number {} for request {}", new Date(), request.getHeader().getRequestId());
-                throw new ExceptionManager("Member number is missing.", ResponseCodes.MEMBER_NUMBER.getCode());
+                throw new ExceptionManager("Member number is missing.", ResponseCodes.MEMBER_NUMBER_MISSING.getCode());
             }
 
             if(stringPredicate.test(request.getBody().getPersonId())) {
                 stringBuilder.append("\n").append("Missing national Id or passport");
                 log.info("Missing national Id or passport in the request request {}", new Date());
-                throw new ExceptionManager("National Id or passport is missing, could not proceed.", ResponseCodes.ID_PASSPORT.getCode());
+                throw new ExceptionManager("National Id or passport is missing, could not proceed.", ResponseCodes.ID_PASSPORT_MISSING.getCode());
             }
 
             if(stringPredicate.test(request.getBody().getFirstName())) {
                 stringBuilder.append("\n").append("Missing first name");
                 log.info("Missing first name in the request request {}", new Date());
-                throw new ExceptionManager("First name is missing, could not proceed.", ResponseCodes.FIRST_NAME.getCode());
+                throw new ExceptionManager("First name is missing, could not proceed.", ResponseCodes.FIRST_NAME_MISSING.getCode());
             }
 
             Optional<Subscriptions> sponsor = subscriptionsRepository.findByMobileNumber(request.getBody().getSponsorMobileNumber());
             if(sponsor.isEmpty()) {
                 stringBuilder.append("\n").append("Sponsor missing.");
                 log.info("No sponsor was found matching the identification {} {}", request.getBody().getSponsorMobileNumber(), new Date());
-                throw new ExceptionManager(String.format("Sorry, you seem not to be subscribed with the Mobile %s. Cannot proceed!", request.getBody().getSponsorMobileNumber()), ResponseCodes.SPONSOR.getCode());
+                throw new ExceptionManager(String.format("Sorry, you seem not to be subscribed with the Mobile %s. Cannot proceed!", request.getBody().getSponsorMobileNumber()), ResponseCodes.SPONSOR_MISSING.getCode());
             }
 
            if((sponsor.get().getBeneficiaries().stream().filter(m->m.getPersonId().equals(request.getBody().getPersonId())).findAny().orElse(null)) != null) {
                stringBuilder.append("\n").append("Beneficiary already enrolled.");
-               throw new ExceptionManager("Beneficiary is already registered for the Id or Passport provided", ResponseCodes.BENEFICIARY_SUBSCRIBED.getCode());
+               throw new ExceptionManager("Beneficiary is already registered for the Id or Passport provided", ResponseCodes.BENEFICIARY_ALREADY_SUBSCRIBED.getCode());
            }
 
             log.info("Preparing to add the request {} for the sponsor {} at {}", request.getBody().getPersonId(), request.getBody().getSponsorMobileNumber(), new Date());
@@ -118,13 +118,13 @@ public class BeneficiariesService {
         Predicate<Request<String>> stringPredicate = str -> str == null || str.getBody().isBlank();
         if(stringPredicate.test(request)) {
             log.info("Sponsor Id missing in the beneficiaries list request {}", new Date());
-            throw new ExceptionManager("Sponsor Id or passport not provided.", ResponseCodes.SPONSOR.getCode());
+            throw new ExceptionManager("Sponsor Id or passport not provided.", ResponseCodes.SPONSOR_MISSING.getCode());
         }
 
         Optional<Subscriptions> subscriptions =  subscriptionsRepository.findByMobileNumber(request.getBody());
         if(subscriptions.isEmpty()) {
             log.info("Provided sponsor {} is not subscribed {}", request, new Date());
-            throw new ExceptionManager(String.format("Sponsor Mobile Number %s could not be found.", request.getBody()), ResponseCodes.SPONSOR.getCode());
+            throw new ExceptionManager(String.format("Sponsor Mobile Number %s could not be found.", request.getBody()), ResponseCodes.SPONSOR_MISSING.getCode());
         }
 
         Response<List<Beneficiary>> response = new Response<>();
@@ -161,26 +161,26 @@ public class BeneficiariesService {
             if(sponsorBeneficiaryPredicate.test(request)) {
                 stringBuilder.append("\n").append("Null or empty request.");
                 log.info("Request object empty {}", new Date());
-                throw new ExceptionManager("Both sponsor and/or beneficiary missing in the request.", ResponseCodes.BENE_SPONSOR.getCode());
+                throw new ExceptionManager("Both sponsor and/or beneficiary missing in the request.", ResponseCodes.BENEFICIARY_OR_SPONSOR_MISSING.getCode());
             }
 
             if(stringPredicate.test(request.getBody().getSponsorMobileNumber())) {
                 stringBuilder.append("\n").append("Sponsor Id missing in the request.");
                 log.info("Sponsor Id missing in the request {}", new Date());
-                throw new ExceptionManager("Your Id is missing in the request.", ResponseCodes.ID_PASSPORT.getCode());
+                throw new ExceptionManager("Your Id is missing in the request.", ResponseCodes.ID_PASSPORT_MISSING.getCode());
             }
 
             if(stringPredicate.test(request.getBody().getBeneficiaryIdOrPassportNumber())) {
                 stringBuilder.append("\n").append("Beneficiary Id is missing in the request.");
                 log.info("Beneficiary Id not provided, cannot remove.");
-                throw new ExceptionManager("Beneficiary Id is missing in your request.", ResponseCodes.BENEFICIARY_ID.getCode());
+                throw new ExceptionManager("Beneficiary Id is missing in your request.", ResponseCodes.BENEFICIARY_ID_MISSING.getCode());
             }
 
             Optional<Subscriptions> subscriptions = subscriptionsRepository.findByMobileNumber(request.getBody().getSponsorMobileNumber());
             if(subscriptions.isEmpty()) {
                 stringBuilder.append("\n").append("Sponsor not found.");
                 log.info("Sponsor with phone number {} not found {}", request.getBody().getSponsorMobileNumber(), new Date());
-                throw new ExceptionManager(String.format("Sponsor with mobile %s not found.", request.getBody().getSponsorMobileNumber()), ResponseCodes.SPONSOR.getCode());
+                throw new ExceptionManager(String.format("Sponsor with mobile %s not found.", request.getBody().getSponsorMobileNumber()), ResponseCodes.SPONSOR_MISSING.getCode());
             }
 
             Optional<Beneficiaries> beneficiary =  repository.findByPersonIdAndStatus(request.getBody().getBeneficiaryIdOrPassportNumber(),Statuses.ACTIVE.getStatus());
