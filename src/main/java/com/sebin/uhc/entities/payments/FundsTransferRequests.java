@@ -21,27 +21,26 @@ public class FundsTransferRequests {
     private String mobileNumber;
     private Double amount;
     private String description;
+    private String purpose;
     private String beneficiaryIdOrPassportNumber;
     private String beneficiaryMemberNumber;
     private String referenceNumber;
     private String kcbFTTransactionID;
     private LocalDateTime dateCreated;
     private boolean sentToKcb=false;
+    private boolean processed=false;
+    private boolean paid=false;
     @Column(nullable = false)
     @ColumnDefault("0")
     private Long sendToKcbRetries=0L;
     private LocalDateTime dateSentToCB;
-    private boolean paid=false;
-    private boolean processed=false;
-    private String processedMessage;
-    private LocalDateTime datePaid;
     private String responseStatus;
     private String statusDescription;
     private LocalDateTime responseDate;
     private String responseCode;
     private String statusMessage;
     private String errorsDescription;
-    private String processingStatus;
+
     @Column(columnDefinition = "text")
     private String request;
     @Column(columnDefinition = "text")

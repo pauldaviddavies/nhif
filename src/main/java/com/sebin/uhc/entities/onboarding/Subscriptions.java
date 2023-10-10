@@ -3,6 +3,7 @@ package com.sebin.uhc.entities.onboarding;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.sebin.uhc.commons.Statuses;
 import com.sebin.uhc.entities.Wallet;
+import com.sebin.uhc.models.Gender;
 import com.sun.istack.NotNull;
 import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
@@ -27,12 +28,15 @@ public class Subscriptions {
     private String surname;
     private boolean isNHIFMember = false;
     private String dateOfBirth;
-    private String gender;
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
     private String memberNumber;
     private String KcbMessageId;
     private String KcbExternalId;
+    private String KcbResponse;
     private boolean isInNHS=true;
     private boolean sentToKcb=false;
+    private boolean processed=false;
     @Column(nullable = false)
     @ColumnDefault("0")
     private Long sendToKcbRetries=0L;

@@ -110,7 +110,7 @@ public class MpesaService {
             mpesaRequests.setAmount(request.getBody().getAmount());
             mpesaRequests.setDescription(request.getBody().getDescription());
             mpesaRequests.setDateCreated(LocalDateTime.now());
-            mpesaRequests.setReferenceNumber(General.getReference("MP"+request.getBody().getIdNumber()));
+            mpesaRequests.setReferenceNumber(General.getReference("M"+request.getBody().getIdNumber().trim()));
             MpesaRequests savedRequest = mpesaRequestsRepository.save(mpesaRequests);
 
             new Thread(() -> initiateSTKPush(savedRequest)).start();

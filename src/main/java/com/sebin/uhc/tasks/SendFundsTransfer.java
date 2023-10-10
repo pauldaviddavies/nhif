@@ -5,6 +5,7 @@ import com.sebin.uhc.commons.*;
 import com.sebin.uhc.entities.onboarding.Beneficiaries;
 import com.sebin.uhc.entities.onboarding.Subscriptions;
 import com.sebin.uhc.entities.payments.FundsTransferRequests;
+import com.sebin.uhc.models.PaymentPurpose;
 import com.sebin.uhc.models.TokenTypes;
 import com.sebin.uhc.models.requests.onboarding.Vooma;
 import com.sebin.uhc.models.requests.payments.FundTransfer;
@@ -49,7 +50,8 @@ public class SendFundsTransfer
 
 
 private void submitFundsTransfers() {
-        List<FundsTransferRequests> fundsTransferRequests =   fundsTransferRequestsRepository.findBySentToKcb(false);
+        List<FundsTransferRequests> fundsTransferRequests =   fundsTransferRequestsRepository.findByProcessed(false);
+        log.info("Found {} records for funds transfer", fundsTransferRequests.size());
         for(FundsTransferRequests transferRequests : fundsTransferRequests)
         {
                 try {
@@ -57,15 +59,20 @@ private void submitFundsTransfers() {
                         if(beneficiary.isEmpty())
                                 continue;
 
-                        if(beneficiary.get().getSubscriptions().getWallet().getAmount() > 0) {
-                                if(transferRequests.getAmount() > beneficiary.get().getSubscriptions().getWallet().getAmount()) {
+                        Optional<Subscriptions> subscriptions =  subscriptionsRepository.findByPersonId(transferRequests.getIdNumber());
+                        if(subscriptions.isEmpty())
+                                continue;
+
+                        if(subscriptions.get().getWallet().getAmount() > 0) {
+                                if(transferRequests.getAmount() > subscriptions.get().getWallet().getAmount()) {
                                         log.info("Amount({}) requested for {} at {} more than the wallet balance({}) for {}",
-                                                transferRequests.getAmount(), beneficiary.get().getPersonId(), new Date(), beneficiary.get().getSubscriptions().getWallet().getAmount(), beneficiary.get().getSubscriptions().getPersonId());
+                                                transferRequests.getAmount(), beneficiary.get().getPersonId(), new Date(), subscriptions.get().getWallet().getAmount(), subscriptions.get().getPersonId());
                                 } else {
                                         FundTransfer fundTransfer = new FundTransfer();
                                         fundTransfer.setRequestId(transferRequests.getReferenceNumber());
                                         fundTransfer.setAmount(transferRequests.getAmount()+"");
-                                        fundTransfer.setNhifNo(transferRequests.getBeneficiaryMemberNumber());
+                                        fundTransfer.setNhifNo((transferRequests.getPurpose().equalsIgnoreCase(PaymentPurpose.CONTRIBUTION.name())) ? "M"+transferRequests.getBeneficiaryMemberNumber() : "P"+transferRequests.getBeneficiaryMemberNumber());
+                                        fundTransfer.setPhoneNumber(transferRequests.getMobileNumber().substring(1));
 
                                         String accessToken = new GetToken().getSecret(configs.getApis_consumer_key(),configs.getApis_consumer_secret());
 
@@ -100,21 +107,17 @@ private void submitFundsTransfers() {
                                         transferRequests.setSentToKcb(true);
 
                                         if (fundsTransferResponse.getStatusCode().equals("0")) {
-                                                transferRequests.setProcessingStatus(Statuses.SUCCESS.getStatus());
+                                                transferRequests.setPaid(true);
                                                 transferRequests.setKcbFTTransactionID(fundsTransferResponse.getResponsePayload().ftTransactionID);
-                                                Optional<Subscriptions> person = subscriptionsRepository.findByPersonId(beneficiary.get().getSubscriptions().getPersonId());
-                                                if(person.isPresent()) {
-                                                        person.get().getWallet().setAmount(person.get().getWallet().getAmount() + transferRequests.getAmount());
-                                                        log.info("Wallet updated for {} at {}", beneficiary.get().getPersonId(), new Date());
-                                                } else {
-                                                        log.info("Subscription not found yet the request went to bank at {} for {}", new Date(), beneficiary.get().getPersonId());
-                                                        transferRequests.setErrorsDescription("Subscription was not found upon response.");
-                                                }
+
+                                                subscriptions.get().getWallet().setAmount(subscriptions.get().getWallet().getAmount() - transferRequests.getAmount());
+                                                log.info("Wallet updated for {} at {}", beneficiary.get().getPersonId(), new Date());
+                                                subscriptionsRepository.save(subscriptions.get());
                                         } else {
-                                                transferRequests.setProcessingStatus(Statuses.FAIL.getStatus());
                                                 StringBuilder error = new StringBuilder();
                                                 fundsTransferResponse.errors.forEach(s -> error.append("\n").append(s));
                                                 transferRequests.setErrorsDescription(error.toString());
+
                                         }
                                         fundsTransferRequestsRepository.save(transferRequests);
                                 }

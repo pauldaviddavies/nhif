@@ -16,9 +16,10 @@ public class Vooma {
     private String externalId;
     private String messageId;
     private String callBackURL;
+    private String nhifMemberNo;
 
     private String idType="01";
-    private String gender="01";
+    private String gender;
     private LoadInitiator initiator;
 
     @Data

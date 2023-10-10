@@ -31,7 +31,7 @@ public class SendToVooma {
         private AccessTokenLoader accessTokenLoader;
         private void submitNewMembers() {
                 log.info("Scheduler activated at {}", new Date());
-                List<Subscriptions> subscriptionsRecords =   subscriptionsRepository.findBySentToKcb(false);
+                List<Subscriptions> subscriptionsRecords =   subscriptionsRepository.findByProcessed(false);
                 log.info("Found {} records to send to vooma", subscriptionsRecords.size());
                 for(Subscriptions subscriptions : subscriptionsRecords) {
                         try {
@@ -40,6 +40,8 @@ public class SendToVooma {
                                 vooma.setFirstName(subscriptions.getFirstName());
                                 vooma.setMiddleName(subscriptions.getMiddleName());
                                 vooma.setLastName(subscriptions.getSurname());
+                                vooma.setGender((subscriptions.getGender().name() == "M") ? "01" : "02");
+                                vooma.setNhifMemberNo(subscriptions.getMemberNumber());
                                 if(subscriptions.getDateOfBirth() != null) {
                                         String dateOfBirth = subscriptions.getDateOfBirth().replace("-","");
                                         if(dateOfBirth.length() >= 8)
@@ -75,8 +77,16 @@ public class SendToVooma {
                                         continue;
                                 }
 
-                                if (voomaResp.getResponseCode().equals("SFUN001")) {
+                                if (voomaResp.getStatusCode().equals("0")) {
                                         subscriptions.setSentToKcb(true);
+                                        subscriptions.setProcessed(true);
+                                        subscriptions.setKcbResponse(voomaResp.getStatusMessage() +" - "+voomaResp.getStatusDescription());
+                                        subscriptions.setBankNotificationDate(LocalDateTime.now());
+                                        subscriptionsRepository.save(subscriptions);
+                                }
+                                if (voomaResp.getStatusCode().equals("01")) {
+                                        subscriptions.setProcessed(true);
+                                        subscriptions.setKcbResponse(voomaResp.getStatusMessage() +" - "+voomaResp.getStatusDescription());
                                         subscriptions.setBankNotificationDate(LocalDateTime.now());
                                         subscriptionsRepository.save(subscriptions);
                                 }

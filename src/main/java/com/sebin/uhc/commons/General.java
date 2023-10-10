@@ -25,7 +25,7 @@ public class General {
 
     public static String getReference(String prefix) {
         //return prefix+refFormat.format(new Date())+new Random().nextInt((999999 - 99) + 1) + 99;
-        return prefix+"-"+new Random().nextInt((999999 - 99) + 1) + 99;
+        return prefix+"-" + ((int)(Math.random() * (999999 - 9999+1) + 9999));
     }
 
     public static String send_request(String requestId, String url, String paramsJSON, String Content_Type, String auth)

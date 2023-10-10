@@ -8,6 +8,7 @@ public class FundsTransferRequest {
     private String mobileNumber;
     private String amount;
     private String beneficiaryIdOrPassportNumber;
+    private String purpose;
     private String description;
     private String PIN;
 }

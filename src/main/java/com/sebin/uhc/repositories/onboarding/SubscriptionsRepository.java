@@ -11,5 +11,5 @@ import java.util.Optional;
 public interface SubscriptionsRepository extends JpaRepository<Subscriptions, Long> {
     Optional<Subscriptions> findByPersonId(String IdOrPassport);
     Optional<Subscriptions> findByMobileNumber(String mobileNumber);
-    List<Subscriptions> findBySentToKcb(boolean sentToKCB);
+    List<Subscriptions> findByProcessed(boolean processed);
 }

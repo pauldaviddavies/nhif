@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class VoomaResp {
-    public String responseCode;
-    public String responseDesc;
+    public String statusCode;
+    public String statusMessage;
+    public String statusDescription;
 }

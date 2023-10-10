@@ -7,6 +7,7 @@ import com.sebin.uhc.entities.onboarding.Subscriptions;
 import com.sebin.uhc.entities.payments.FundsTransferRequests;
 import com.sebin.uhc.entities.payments.MpesaRequests;
 import com.sebin.uhc.exceptions.ExceptionManager;
+import com.sebin.uhc.models.PaymentPurpose;
 import com.sebin.uhc.models.RequestLogModel;
 import com.sebin.uhc.models.TokenTypes;
 import com.sebin.uhc.models.requests.onboarding.Request;
@@ -22,6 +23,7 @@ import com.sebin.uhc.repositories.payments.FundsTransferRequestsRepository;
 import com.sebin.uhc.repositories.payments.MpesaRequestsRepository;
 import com.sebin.uhc.services.onboarding.RequestLogTrailService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.EnumUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -87,6 +89,12 @@ public class PaymentsService {
                 throw new ExceptionManager("Amount invalid.", ResponseCodes.INVALID_AMOUNT.getCode());
             }
 
+            if((Integer.parseInt(request.getBody().getAmount())) % 500 != 0) {
+                stringBuilder.append("\n").append("Amount must be in multiple of 500.");
+                log.info("Amount must be in multiple of 500 in the request {}", new Date());
+                throw new ExceptionManager("Amount must be in multiple of 500", ResponseCodes.INVALID_AMOUNT.getCode());
+            }
+
             if(stringPredicate.test(request.getBody().getBeneficiaryIdOrPassportNumber())) {
                 stringBuilder.append("\n").append("Beneficiary Id or passport missing in the request.");
                 log.info("Beneficiary Id or passport missing in the request {}", new Date());
@@ -104,6 +112,26 @@ public class PaymentsService {
                 stringBuilder.append("\n").append(String.format("Subscriber %s not found", request.getBody()));
                 log.info("Subscriber {} not found.", request);
                 return new Response<>(new Header(String.format("Subscriber %s not found.", request.getBody().getIdNumber()), ResponseCodes.BENE_SPONSOR.getCode()));
+            }
+
+            if(person.get().getWallet().getAmount() < Double.parseDouble(request.getBody().getAmount()))
+            {
+                stringBuilder.append("\n").append(String.format("Insufficient balance {}", new Date()));
+                log.info("Insufficient balance {}", new Date());
+                return new Response<>(new Header(String.format("Insufficient balance for %s", request.getBody().getIdNumber()), ResponseCodes.INSUFFICIENT_BALANCE.getCode()));
+            }
+
+            if(stringPredicate.test(request.getBody().getPurpose())) {
+                stringBuilder.append("\n").append("Payment Purpose missing in the request.");
+                log.info("Payment Purpose missing in the request {}", new Date());
+                throw new ExceptionManager("Payment Purpose is missing in the request.", ResponseCodes.PAYMENT_PURPOSE_MISSING.getCode());
+            }
+
+            if(!(EnumUtils.isValidEnum(PaymentPurpose.class, request.getBody().getPurpose().toUpperCase())))
+            {
+                stringBuilder.append("\n").append("Invalid Payment Purpose");
+                log.info("Invalid Payment Purpose in the request {}", new Date());
+                throw new ExceptionManager("Invalid Payment Purpose in the request.", ResponseCodes.INVALID_PAYMENT_PUROSE.getCode());
             }
 
             Optional<Beneficiaries> beneficiary =  beneficiaryRepository.findByPersonIdAndStatus(request.getBody().getBeneficiaryIdOrPassportNumber(),Statuses.ACTIVE.getStatus());
@@ -132,6 +160,7 @@ public class PaymentsService {
                 throw new ExceptionManager("Incorrect PIN", ResponseCodes.PIN_INCORRECT.getCode());
             }
 
+
             FundsTransferRequests fundsTransferRequests = new FundsTransferRequests();
             fundsTransferRequests.setIdNumber(request.getBody().getIdNumber());
             fundsTransferRequests.setMobileNumber(request.getBody().getMobileNumber());
@@ -139,10 +168,11 @@ public class PaymentsService {
             fundsTransferRequests.setBeneficiaryIdOrPassportNumber(request.getBody().getBeneficiaryIdOrPassportNumber());
             fundsTransferRequests.setBeneficiaryMemberNumber(beneficiary.get().getMemberNumber());
             fundsTransferRequests.setDescription(request.getBody().getDescription());
+            fundsTransferRequests.setPurpose(request.getBody().getPurpose().toUpperCase());
             fundsTransferRequests.setDateCreated(LocalDateTime.now());
-            fundsTransferRequests.setReferenceNumber(General.getReference("FT"+request.getBody().getIdNumber()));
+            fundsTransferRequests.setReferenceNumber(General.getReference("F"+request.getBody().getIdNumber().trim()));
 
-            Optional<FundsTransferRequests> pendingRequest = fundsTransferRequestsRepository.findPendingTransactions(fundsTransferRequests.getMobileNumber(),fundsTransferRequests.getAmount(),fundsTransferRequests.getBeneficiaryIdOrPassportNumber(),fundsTransferRequests.getDescription(),false);
+            Optional<FundsTransferRequests> pendingRequest = fundsTransferRequestsRepository.findPendingTransactions(fundsTransferRequests.getMobileNumber(),fundsTransferRequests.getAmount(),fundsTransferRequests.getBeneficiaryIdOrPassportNumber(),fundsTransferRequests.getPurpose(),false);
             if(pendingRequest.isPresent()) {
                 throw new ExceptionManager("Similar Request Pending", ResponseCodes.SIMILAR_REQUEST_PENDING.getCode());
             }

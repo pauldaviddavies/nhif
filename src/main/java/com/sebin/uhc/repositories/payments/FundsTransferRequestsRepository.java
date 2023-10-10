@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface FundsTransferRequestsRepository extends JpaRepository<FundsTransferRequests,Long> {
-    List<FundsTransferRequests> findBySentToKcb(boolean sentToKCB);
-    @Query(value = "select * from funds_transfer_requests where mobile_number=?1 and amount =?2 and beneficiary_id_or_passport_number=?3 and description=?4 and  processed=?5 order by id desc limit 1",nativeQuery = true)
-    Optional<FundsTransferRequests> findPendingTransactions(String mobileNumber, Double amount, String  beneficiaryIdOrPassportNumber, String description, boolean processed);
+    List<FundsTransferRequests> findByProcessed(boolean processed);
+    @Query(value = "select * from funds_transfer_requests where mobile_number=?1 and amount =?2 and beneficiary_id_or_passport_number=?3 and purpose=?4 and  processed=?5 order by id desc limit 1",nativeQuery = true)
+    Optional<FundsTransferRequests> findPendingTransactions(String mobileNumber, Double amount, String  beneficiaryIdOrPassportNumber, String purpose, boolean processed);
 }

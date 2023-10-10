@@ -13,7 +13,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
@@ -23,6 +27,7 @@ import java.util.regex.Pattern;
 
 @Slf4j(topic = ":: HELPER :::")
 public class Helper {
+    public static DateFormat refFormat = new SimpleDateFormat("yyyy-MM-dd");
 
     public static RequestLogModel validateRequestHeader(String requestType,  Request<?> request, HttpServletRequest servletRequest, RequestLogTrailService requestLogTrailService) {
         log.info(requestType + " at {} ", new Date());
@@ -78,6 +83,16 @@ public class Helper {
             Matcher matcher = pattern.matcher(phoneNumber);
             return matcher.matches();
         }*/
+        return true;
+    }
+
+    public static boolean isDateValid(String dateStr) {
+        try {
+            refFormat.setLenient(false);
+            refFormat.parse(dateStr);
+        } catch (DateTimeParseException | ParseException e) {
+            return false;
+        }
         return true;
     }
 

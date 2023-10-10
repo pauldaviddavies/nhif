@@ -6,6 +6,8 @@ import com.sebin.uhc.entities.onboarding.Beneficiaries;
 import com.sebin.uhc.entities.onboarding.Subscriptions;
 import com.sebin.uhc.entities.onboarding.UnSubscriptionsRequests;
 import com.sebin.uhc.exceptions.ExceptionManager;
+import com.sebin.uhc.models.Gender;
+import com.sebin.uhc.models.PaymentPurpose;
 import com.sebin.uhc.models.RequestLogModel;
 import com.sebin.uhc.models.Subscription;
 import com.sebin.uhc.models.requests.onboarding.ChangePin;
@@ -20,6 +22,7 @@ import com.sebin.uhc.repositories.onboarding.BeneficiaryRepository;
 import com.sebin.uhc.repositories.onboarding.SubscriptionsRepository;
 import com.sebin.uhc.repositories.onboarding.UnsubscriptionRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.EnumUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -69,7 +72,7 @@ public class SubscriptionsService {
             if(Helper.isPhoneNumberValid(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Wrong mobile number format.");
                 log.info("Validation failed. Wrong mobile number format {}", new Date());
-                throw new ExceptionManager("Mobile number must be in the format +254... or 0...", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
+                throw new ExceptionManager("Mobile number must be in the format +254...", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
             }
 
             if(strPredicate.test(request.getBody().getPersonId())) {
@@ -90,7 +93,20 @@ public class SubscriptionsService {
                 throw new ExceptionManager("Date of birth is missing", ResponseCodes.DATE_OF_BIRTH.getCode());
             }
 
-            if(request.getBody().getDateOfBirth().length() != 10)
+            if(strPredicate.test(request.getBody().getGender())) {
+                stringBuilder.append("\n").append("Missing gender.");
+                log.info("Validation failed. Missing gender {}", new Date());
+                throw new ExceptionManager("Gender is missing", ResponseCodes.MISSING_GENDER.getCode());
+            }
+
+            if(!(EnumUtils.isValidEnum(Gender.class, request.getBody().getGender().toUpperCase())))
+            {
+                stringBuilder.append("\n").append("Invalid gender");
+                log.info("Invalid gender in the request {}", new Date());
+                throw new ExceptionManager("Invalid gender in the request.", ResponseCodes.INVALID_GENDER.getCode());
+            }
+
+            if(!Helper.isDateValid(request.getBody().getDateOfBirth()))
             {
                 stringBuilder.append("\n").append("Invalid date of birth.");
                 log.info("Validation failed. Invalid date of birth {}", new Date());
@@ -121,9 +137,9 @@ public class SubscriptionsService {
             Subscriptions person = new Subscriptions(request.getBody().getMobileNumber(), request.getBody().getPersonId(), request.getBody().getFirstName(), request.getBody().getMiddleName(), request.getBody().getSurname(), Statuses.ACTIVE.getStatus(), request.getBody().isNHIFMember(), new Wallet());
             person.setMemberNumber(request.getBody().getMemberNumber());
             person.setDateOfBirth(request.getBody().getDateOfBirth());
-            person.setGender(request.getBody().getGender());
-            person.setKcbMessageId(General.getReference("SC"+request.getBody().getPersonId()));
-            person.setKcbExternalId(General.getReference("SCXT"+request.getBody().getPersonId()));
+            person.setGender(Gender.valueOf(request.getBody().getGender().toUpperCase()));
+            person.setKcbMessageId(General.getReference("S"+request.getBody().getPersonId().trim()));
+            person.setKcbExternalId(General.getReference("X"+request.getBody().getPersonId().trim()));
             person = repository.save(person);
             stringBuilder.append("\nSeems to have saved the record for subscription; one more check to ascertain.");
 
@@ -198,7 +214,7 @@ public class SubscriptionsService {
                 stringBuilder.append(String.format("%s already subscribed", request.getBody()));
                 subscriptionInquiry.setSubscribed(true);
                 subscriptionInquiry.setPinSet(!stringPredicate.test(person.get().getPassword()));
-                subscriptionInquiry.setProfile(new Subscription(person.get().getPersonId(), person.get().getMobileNumber(), person.get().getFirstName(), person.get().getMiddleName(), person.get().getSurname(), person.get().isNHIFMember(),person.get().getMemberNumber(),person.get().getDateOfBirth(),person.get().getGender()));
+                subscriptionInquiry.setProfile(new Subscription(person.get().getPersonId(), person.get().getMobileNumber(), person.get().getFirstName(), person.get().getMiddleName(), person.get().getSurname(), person.get().isNHIFMember(),person.get().getMemberNumber(),person.get().getDateOfBirth(),person.get().getGender().name()));
             }
 
             if(!isHeaderNull(request))
@@ -293,7 +309,7 @@ public class SubscriptionsService {
     }
 
     private Subscription getSubscription(Subscriptions person) {
-        return new Subscription(person.getPersonId(), person.getMobileNumber(), person.getFirstName(), person.getMiddleName(), person.getSurname(), person.isNHIFMember(),person.getMemberNumber(),person.getDateOfBirth(),person.getGender());
+        return new Subscription(person.getPersonId(), person.getMobileNumber(), person.getFirstName(), person.getMiddleName(), person.getSurname(), person.isNHIFMember(),person.getMemberNumber(),person.getDateOfBirth(),person.getGender().name());
     }
 
     public Response<SubscriptionInquiry> inquireId(Request<String> request, RequestLogModel requestLogModel) {
@@ -428,7 +444,7 @@ public class SubscriptionsService {
             if(Helper.isPhoneNumberValid(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Wrong mobile number format.");
                 log.info("Validation failed. Wrong mobile number format {}", new Date());
-                throw new ExceptionManager("Mobile number must be in the format +254... or 0...", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
+                throw new ExceptionManager("Mobile number must be in the format +254...", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
             }
 
             if(strPredicate.test(request.getBody().getPIN())) {
@@ -519,7 +535,7 @@ public class SubscriptionsService {
             if(Helper.isPhoneNumberValid(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Wrong mobile number format.");
                 log.info("Validation failed. Wrong mobile number format {}", new Date());
-                throw new ExceptionManager("Mobile number must be in the format +254... or 0...", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
+                throw new ExceptionManager("Mobile number must be in the format +254...", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
             }
 
             if(strPredicate.test(request.getBody().getPIN())) {
@@ -593,7 +609,7 @@ public class SubscriptionsService {
             if(Helper.isPhoneNumberValid(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Wrong mobile number format.");
                 log.info("Validation failed. Wrong mobile number format {}", new Date());
-                throw new ExceptionManager("Mobile number must be in the format +254... or 0...", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
+                throw new ExceptionManager("Mobile number must be in the format +254...", ResponseCodes.MOBILE_NUMBER_FORMAT.getCode());
             }
 
             if(strPredicate.test(request.getBody().getPIN())) {
