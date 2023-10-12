@@ -40,28 +40,36 @@ public class GetToken {
     }
 
     private void updateSKTPUSHToken() {
-        long tokenId = 0;
-        Optional<Token> tokenRecord = tokenRepository.findByTokenTypeDesc(TokenTypes.STKPUSH.name());
-        {
-            if(tokenRecord.isPresent()) {
-                if(LocalDateTime.now().plusMinutes(configs.getStkpush_token_advance_request_minutes()).isBefore(tokenRecord.get().getExpiryDate()))
-                    return;
+        try {
+            long tokenId = 0;
+            Optional<Token> tokenRecord = tokenRepository.findByTokenTypeDesc(TokenTypes.STKPUSH.name());
+
+            if (tokenRecord.isPresent()) {
+                // if(LocalDateTime.now().plusMinutes(configs.getStkpush_token_advance_request_minutes()).isBefore(tokenRecord.get().getExpiryDate()))
+                //     return;
 
                 tokenId = tokenRecord.get().getId();
             }
+
+            System.out.println("Getting token at " + LocalDateTime.now());
+
+            String token_resp = General.send_request("", configs.getStkpush_token_url(), "", AppConstants.APPLICATION_URL_ENCODED, getSecret(configs.getStkpush_token_consumer_key(), configs.getStkpush_token_consumer_secret()));
+            if (token_resp.isBlank()) log.info("Null or empty token response");
+
+            AToken aToken = new Gson().fromJson(token_resp, AToken.class);
+            if (aToken == null || aToken.getAccess_token() == null) {
+                log.info("Null or empty access token");
+                return;
+            }
+
+            Token token = new Token(tokenId, aToken.getAccess_token(), TokenTypes.STKPUSH.name(), LocalDateTime.now(), LocalDateTime.now().plusSeconds(aToken.getExpires_in()));
+            tokenRepository.save(token);
         }
-
-        String token_resp = General.send_request("", configs.getStkpush_token_url(),"", AppConstants.APPLICATION_URL_ENCODED,getSecret(configs.getStkpush_token_consumer_key(),configs.getStkpush_token_consumer_secret()));
-        if (token_resp.isBlank()) log.info("Null or empty token response");
-
-        AToken aToken = new Gson().fromJson(token_resp, AToken.class);
-        if (aToken == null || aToken.getAccess_token() == null) {
-            log.info("Null or empty access token");
-            return;
+        catch (Exception ex)
+        {
+            ex.printStackTrace();
+            System.out.println("Exception getting token at "+LocalDateTime.now());
         }
-
-        Token token = new Token(tokenId,aToken.getAccess_token(), TokenTypes.STKPUSH.name(),LocalDateTime.now(),LocalDateTime.now().plusSeconds(aToken.getExpires_in()));
-        tokenRepository.save(token);
     }
 
 
@@ -93,7 +101,7 @@ public class GetToken {
         tokenRepository.save(token);
     }
 
-    @Scheduled(fixedDelay = (2000)) //2s
+    @Scheduled(fixedDelay = 300000) //5 min
     public void scheduleFixedDelayTask() {
          updateSKTPUSHToken();
         //updateFundsTransferToken();

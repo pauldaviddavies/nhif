@@ -4,10 +4,12 @@ import com.google.gson.Gson;
 import com.sebin.uhc.commons.*;
 import com.sebin.uhc.entities.Wallet;
 import com.sebin.uhc.entities.WalletTransactions;
+import com.sebin.uhc.entities.notifications.Sms;
 import com.sebin.uhc.entities.onboarding.Subscriptions;
 import com.sebin.uhc.entities.payments.MpesaRequests;
 import com.sebin.uhc.exceptions.ExceptionManager;
 import com.sebin.uhc.models.RequestLogModel;
+import com.sebin.uhc.models.SmsContext;
 import com.sebin.uhc.models.TokenTypes;
 import com.sebin.uhc.models.mpesa.WalletBalance;
 import com.sebin.uhc.models.requests.onboarding.Request;
@@ -18,6 +20,7 @@ import com.sebin.uhc.models.responses.notifications.MpesaResponse;
 import com.sebin.uhc.models.responses.onboarding.Header;
 import com.sebin.uhc.models.responses.onboarding.Response;
 import com.sebin.uhc.models.responses.payments.MpesaNotification;
+import com.sebin.uhc.repositories.SmsRepository;
 import com.sebin.uhc.repositories.onboarding.SubscriptionsRepository;
 import com.sebin.uhc.repositories.payments.MpesaRequestsRepository;
 import com.sebin.uhc.repositories.payments.WalletRepository;
@@ -53,6 +56,8 @@ public class MpesaService {
     private WalletTransactionRepository walletTransactionRepository;
     @Autowired
     private WalletRepository walletRepository;
+    @Autowired
+    private SmsRepository smsRepository;
 
     public Response<?> processMpesaRequest(Request<Mpesa> request, RequestLogModel requestLogModel) {
         StringBuilder stringBuilder = new StringBuilder();
@@ -235,6 +240,7 @@ public class MpesaService {
                     walletTransactions = walletTransactionRepository.save(walletTransactions);
                     stringBuilder.append("\n").append("Wallet transaction entry created");
 
+
                     stringBuilder.append("\n").append(String.format("Subscriber for notification found, mobile %s", mpesaResponse.getRequestPayload().getAdditionalData().getNotificationData().getDebitMSISDN()));
 
                     if(subscriptions.get().getWallet() != null) {
@@ -247,6 +253,16 @@ public class MpesaService {
                         stringBuilder.append("\n").append(String.format("Wallet for %s updated with %s", mpesaResponse.getRequestPayload().getAdditionalData().getNotificationData().getDebitMSISDN(), amount));
                         Wallet newWallet =  walletRepository.save(subscriptions.get().getWallet());
                         walletTransactions.setWalletBalance(newWallet.getAmount());
+
+                        Sms sms = new Sms();
+                        sms.setDateCreated(LocalDateTime.now());
+                        sms.setSmsContext(SmsContext.WELCOME);
+                        sms.setMobileNumber(subscriptions.get().getMobileNumber());
+                        sms.setMessage("Dear "+subscriptions.get().getFirstName()+",\nYour payment of KES "+amount+" has been received successfully. Accumulation balance is KES "+newWallet.getAmount());
+                        sms.setReferenceNumber("SMS"+subscriptions.get().getPersonId());
+                        smsRepository.save(sms);
+                        sms.setReferenceNumber(sms.getReferenceNumber()+"-"+sms.getId());
+                        smsRepository.save(sms);
                     }
                     else {
                         log.info("Did not get wallet, creating one for the request Id {} at {}", requestLogModel.getRequestId(), new Date());

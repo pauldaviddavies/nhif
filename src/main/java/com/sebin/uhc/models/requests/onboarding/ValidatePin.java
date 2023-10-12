@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Data
 public class ValidatePin {
+    private String idNumber;
     private String mobileNumber;
     private String PIN;
 }

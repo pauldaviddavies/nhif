@@ -183,7 +183,7 @@ public class BeneficiariesService {
                 throw new ExceptionManager(String.format("Sponsor with mobile %s not found.", request.getBody().getSponsorMobileNumber()), ResponseCodes.SPONSOR_MISSING.getCode());
             }
 
-            Optional<Beneficiaries> beneficiary =  repository.findByPersonIdAndStatus(request.getBody().getBeneficiaryIdOrPassportNumber(),Statuses.ACTIVE.getStatus());
+            Optional<Beneficiaries> beneficiary =  repository.findBeneficiary(request.getBody().getBeneficiaryIdOrPassportNumber(),Statuses.ACTIVE.getStatus(),subscriptions.get().getId());
             if(beneficiary.isPresent()) {
                 if(beneficiary.get().getSubscriptions().getId() != subscriptions.get().getId()) {
                     stringBuilder.append("\n").append("Sponsor beneficiary not found");

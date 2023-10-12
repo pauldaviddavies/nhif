@@ -2,12 +2,14 @@ package com.sebin.uhc.services.onboarding;
 
 import com.sebin.uhc.commons.*;
 import com.sebin.uhc.entities.Wallet;
+import com.sebin.uhc.entities.notifications.Sms;
 import com.sebin.uhc.entities.onboarding.Beneficiaries;
 import com.sebin.uhc.entities.onboarding.Subscriptions;
 import com.sebin.uhc.entities.onboarding.UnSubscriptionsRequests;
 import com.sebin.uhc.exceptions.ExceptionManager;
 import com.sebin.uhc.models.Gender;
 import com.sebin.uhc.models.RequestLogModel;
+import com.sebin.uhc.models.SmsContext;
 import com.sebin.uhc.models.Subscription;
 import com.sebin.uhc.models.requests.onboarding.ChangePin;
 import com.sebin.uhc.models.requests.onboarding.Request;
@@ -17,6 +19,7 @@ import com.sebin.uhc.models.requests.payments.WalletBalanceRequest;
 import com.sebin.uhc.models.responses.onboarding.Header;
 import com.sebin.uhc.models.responses.onboarding.Response;
 import com.sebin.uhc.models.responses.onboarding.SubscriptionInquiry;
+import com.sebin.uhc.repositories.SmsRepository;
 import com.sebin.uhc.repositories.onboarding.BeneficiaryRepository;
 import com.sebin.uhc.repositories.onboarding.SubscriptionsRepository;
 import com.sebin.uhc.repositories.onboarding.UnsubscriptionRepository;
@@ -44,6 +47,8 @@ public class SubscriptionsService {
     private UnsubscriptionRepository unsubscriptionRepository;
     @Autowired
     private SubscriptionsRepository repository;
+    @Autowired
+    private SmsRepository smsRepository;
     @Autowired
     private SubscriptionArchService subscriptionArchService;
 
@@ -144,6 +149,15 @@ public class SubscriptionsService {
             person.setKcbExternalId(person.getKcbExternalId()+"-"+person.getId());
             person=repository.save(person);
 
+            Sms sms = new Sms();
+            sms.setDateCreated(LocalDateTime.now());
+            sms.setSmsContext(SmsContext.WELCOME);
+            sms.setMobileNumber(person.getMobileNumber());
+            sms.setMessage("Dear "+person.getFirstName()+",\nWelcome to NHIF Premium, You can now make contributions to your wallet. Call 0700000000 for any enquiries");
+            sms.setReferenceNumber("SMS"+person.getPersonId());
+            smsRepository.save(sms);
+            sms.setReferenceNumber(sms.getReferenceNumber()+"-"+sms.getId());
+            smsRepository.save(sms);
 
             stringBuilder.append("\nSeems to have saved the record for subscription; one more check to ascertain.");
 
@@ -536,6 +550,12 @@ public class SubscriptionsService {
                 throw new ExceptionManager("Mobile number is missing.", ResponseCodes.MOBILE_NUMBER_MISSING.getCode());
             }
 
+            if(strPredicate.test(request.getBody().getIdNumber())) {
+                stringBuilder.append("\n").append("Missing ID number.");
+                log.info("Validation failed. Missing ID number {}", new Date());
+                throw new ExceptionManager("ID number is missing.", ResponseCodes.ID_PASSPORT_MISSING.getCode());
+            }
+
             if(Helper.isPhoneNumberValid(request.getBody().getMobileNumber())) {
                 stringBuilder.append("\n").append("Wrong mobile number format.");
                 log.info("Validation failed. Wrong mobile number format {}", new Date());
@@ -555,11 +575,11 @@ public class SubscriptionsService {
             }
 
 
-            Optional<Subscriptions> person = repository.findByMobileNumber(request.getBody().getMobileNumber());
+            Optional<Subscriptions> person = repository.findByPersonId(request.getBody().getIdNumber());
             if(person.isEmpty()) {
                 stringBuilder.append("\n").append(String.format("Subscriber %s not found", request.getBody()));
                 log.info("Subscriber {} not found.", request);
-                return new Response<>(new Header(String.format("Subscriber %s not found.", request.getBody().getMobileNumber())));
+                return new Response<>(new Header(String.format("Subscriber %s not found.", request.getBody().getIdNumber())));
             }
 
 
@@ -567,7 +587,7 @@ public class SubscriptionsService {
                 throw new ExceptionManager("Incorrect PIN", ResponseCodes.PIN_INCORRECT.getCode());
             }
 
-            stringBuilder.append("\n").append("PIN set was successful.");
+            stringBuilder.append("\n").append("PIN validation was successful.");
             log.info("PIN set for {} was successful {}", request.getBody().getMobileNumber(), new Date());
             return new Response<>(new Header(true,  ResponseCodes.SUCCESS.getCode(), "PIN validated successfully."));
         } catch (Exception exception) {

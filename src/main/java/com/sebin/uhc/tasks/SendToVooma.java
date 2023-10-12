@@ -101,7 +101,7 @@ public class SendToVooma {
 
         }
 
-@Scheduled(fixedDelay = (2000)) //2s
+@Scheduled(fixedDelay = 2000) //2s
 public void scheduleFixedDelayTask() {
         submitNewMembers();
 }

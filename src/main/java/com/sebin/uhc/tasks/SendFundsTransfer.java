@@ -2,6 +2,7 @@ package com.sebin.uhc.tasks;
 
 import com.google.gson.Gson;
 import com.sebin.uhc.commons.*;
+import com.sebin.uhc.entities.WalletTransactions;
 import com.sebin.uhc.entities.notifications.Sms;
 import com.sebin.uhc.entities.onboarding.Beneficiaries;
 import com.sebin.uhc.entities.onboarding.Subscriptions;
@@ -20,6 +21,7 @@ import com.sebin.uhc.repositories.SmsRepository;
 import com.sebin.uhc.repositories.onboarding.BeneficiaryRepository;
 import com.sebin.uhc.repositories.onboarding.SubscriptionsRepository;
 import com.sebin.uhc.repositories.payments.FundsTransferRequestsRepository;
+import com.sebin.uhc.repositories.payments.WalletTransactionRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -53,6 +55,8 @@ public class SendFundsTransfer
 
         @Autowired
         private SmsRepository smsRepository;
+        @Autowired
+        private WalletTransactionRepository walletTransactionRepository;
 
 
 private void submitFundsTransfers() {
@@ -122,6 +126,22 @@ private void submitFundsTransfers() {
                                                 log.info("Wallet updated for {} at {}", beneficiary.get().getPersonId(), new Date());
                                                 subscriptionsRepository.save(subscriptions.get());
 
+                                                WalletTransactions walletTransactions = new WalletTransactions();
+                                                walletTransactions.setAmount(transferRequests.getAmount());
+                                                walletTransactions.setTransactionId(fundsTransferResponse.getResponsePayload().ftTransactionID);
+                                                walletTransactions.setDateCreated(LocalDateTime.now());
+                                                walletTransactions.setTransactionType(WalletTransactionType.DEBIT.getType());
+                                                walletTransactions.setDescription("Payment from wallet to NHIF.");
+                                                walletTransactions.setFundSource("Wallet");
+                                                walletTransactions.setFundDestination("NHIF");
+                                                walletTransactions.setLastUpdatedOn(LocalDateTime.now());
+                                                walletTransactions.setWalletBalance(subscriptions.get().getWallet().getAmount() - transferRequests.getAmount());
+                                                walletTransactions.setRequestId(transferRequests.getReferenceNumber());
+                                                walletTransactions.setStatus("Active");
+                                                walletTransactions.setReferenceNumber(transferRequests.getReferenceNumber());
+                                                walletTransactions.setWallet(subscriptions.get().getWallet());
+                                                walletTransactions = walletTransactionRepository.save(walletTransactions);
+
                                                 Sms sms = new Sms();
                                                 sms.setDateCreated(LocalDateTime.now());
                                                 sms.setSmsContext(SmsContext.WALLET_TO_NHIF_PAYMENT);
@@ -154,7 +174,7 @@ private void submitFundsTransfers() {
 
 }
 
-@Scheduled(fixedDelay = (2000)) //2s
+@Scheduled(fixedDelay = 2000) //2s
 public void scheduleFixedDelayTask() {
         //log.info("Funds transfer scheduler activated at {}", new Date());
         submitFundsTransfers();

@@ -89,7 +89,7 @@ public class SendSms {
 
         }
 
-@Scheduled(fixedDelay = (2000)) //2s
+@Scheduled(fixedDelay = 2000) //2s
 public void scheduleFixedDelayTask() {
         sendSms();
 }
