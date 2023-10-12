@@ -202,7 +202,7 @@ public class BeneficiariesService {
                 archiveBeneficiary(beneficiary.get());
                 repository.delete(beneficiary.get());
                 stringBuilder.append("\n").append("Beneficiary removed successfully.");
-                return new Response<>(new Header(String.format("Beneficiary with Id %s was removed successfully.", request.getBody().getBeneficiaryIdOrPassportNumber()),ResponseCodes.SUCCESS.getCode()));
+                return new Response<>(new Header(true,ResponseCodes.SUCCESS.getCode(),String.format("Beneficiary with Id %s was removed successfully.", request.getBody().getBeneficiaryIdOrPassportNumber())));
             }
 
             stringBuilder.append("\n").append("Beneficiary not found");

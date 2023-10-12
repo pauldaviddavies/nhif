@@ -137,9 +137,14 @@ public class SubscriptionsService {
             person.setMemberNumber(request.getBody().getMemberNumber());
             person.setDateOfBirth(request.getBody().getDateOfBirth());
             person.setGender(Gender.valueOf(request.getBody().getGender().toUpperCase()));
-            person.setKcbMessageId(General.getReference("S"+request.getBody().getPersonId().trim()));
-            person.setKcbExternalId(General.getReference("X"+request.getBody().getPersonId().trim()));
+            person.setKcbMessageId("S"+request.getBody().getPersonId().trim());
+            person.setKcbExternalId("X"+request.getBody().getPersonId().trim());
             person = repository.save(person);
+            person.setKcbMessageId(person.getKcbMessageId()+"-"+person.getId());
+            person.setKcbExternalId(person.getKcbExternalId()+"-"+person.getId());
+            person=repository.save(person);
+
+
             stringBuilder.append("\nSeems to have saved the record for subscription; one more check to ascertain.");
 
             if(person.getId() > 0) {

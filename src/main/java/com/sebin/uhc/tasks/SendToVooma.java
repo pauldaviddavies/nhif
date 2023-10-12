@@ -30,9 +30,9 @@ public class SendToVooma {
         @Autowired
         private AccessTokenLoader accessTokenLoader;
         private void submitNewMembers() {
-                log.info("Scheduler activated at {}", new Date());
+                //log.info("Scheduler activated at {}", new Date());
                 List<Subscriptions> subscriptionsRecords =   subscriptionsRepository.findByProcessed(false);
-                log.info("Found {} records to send to vooma", subscriptionsRecords.size());
+                //log.info("Found {} records to send to vooma", subscriptionsRecords.size());
                 for(Subscriptions subscriptions : subscriptionsRecords) {
                         try {
                                 Vooma vooma = new Vooma();
@@ -101,7 +101,7 @@ public class SendToVooma {
 
         }
 
-@Scheduled(fixedDelay = (60000L)) //1 minute
+@Scheduled(fixedDelay = (2000)) //2s
 public void scheduleFixedDelayTask() {
         submitNewMembers();
 }

@@ -26,4 +26,5 @@ public class FundTransfer {
     private String amount;
     private String ftType="NHIF_PAYMENT";
     private String phoneNumber;
+    private String externalId;
 }

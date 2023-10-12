@@ -2,10 +2,12 @@ package com.sebin.uhc.tasks;
 
 import com.google.gson.Gson;
 import com.sebin.uhc.commons.*;
+import com.sebin.uhc.entities.notifications.Sms;
 import com.sebin.uhc.entities.onboarding.Beneficiaries;
 import com.sebin.uhc.entities.onboarding.Subscriptions;
 import com.sebin.uhc.entities.payments.FundsTransferRequests;
 import com.sebin.uhc.models.PaymentPurpose;
+import com.sebin.uhc.models.SmsContext;
 import com.sebin.uhc.models.TokenTypes;
 import com.sebin.uhc.models.requests.onboarding.Vooma;
 import com.sebin.uhc.models.requests.payments.FundTransfer;
@@ -14,6 +16,7 @@ import com.sebin.uhc.models.responses.onboarding.Header;
 import com.sebin.uhc.models.responses.onboarding.Response;
 import com.sebin.uhc.models.responses.onboarding.VoomaResp;
 import com.sebin.uhc.models.responses.payments.FundsTransferResponse;
+import com.sebin.uhc.repositories.SmsRepository;
 import com.sebin.uhc.repositories.onboarding.BeneficiaryRepository;
 import com.sebin.uhc.repositories.onboarding.SubscriptionsRepository;
 import com.sebin.uhc.repositories.payments.FundsTransferRequestsRepository;
@@ -48,10 +51,13 @@ public class SendFundsTransfer
         @Autowired
         private SubscriptionsRepository subscriptionsRepository;
 
+        @Autowired
+        private SmsRepository smsRepository;
+
 
 private void submitFundsTransfers() {
         List<FundsTransferRequests> fundsTransferRequests =   fundsTransferRequestsRepository.findByProcessed(false);
-        log.info("Found {} records for funds transfer", fundsTransferRequests.size());
+        //log.info("Found {} records for funds transfer", fundsTransferRequests.size());
         for(FundsTransferRequests transferRequests : fundsTransferRequests)
         {
                 try {
@@ -73,6 +79,7 @@ private void submitFundsTransfers() {
                                         fundTransfer.setAmount(transferRequests.getAmount()+"");
                                         fundTransfer.setNhifNo((transferRequests.getPurpose().equalsIgnoreCase(PaymentPurpose.CONTRIBUTION.name())) ? "M"+transferRequests.getBeneficiaryMemberNumber() : "P"+transferRequests.getBeneficiaryMemberNumber());
                                         fundTransfer.setPhoneNumber(transferRequests.getMobileNumber().substring(1));
+                                        fundTransfer.setExternalId(subscriptions.get().getKcbExternalId());
 
                                         String accessToken = new GetToken().getSecret(configs.getApis_consumer_key(),configs.getApis_consumer_secret());
 
@@ -109,17 +116,29 @@ private void submitFundsTransfers() {
                                         if (fundsTransferResponse.getStatusCode().equals("0")) {
                                                 transferRequests.setPaid(true);
                                                 transferRequests.setKcbFTTransactionID(fundsTransferResponse.getResponsePayload().ftTransactionID);
+                                                fundsTransferRequestsRepository.save(transferRequests);
 
                                                 subscriptions.get().getWallet().setAmount(subscriptions.get().getWallet().getAmount() - transferRequests.getAmount());
                                                 log.info("Wallet updated for {} at {}", beneficiary.get().getPersonId(), new Date());
                                                 subscriptionsRepository.save(subscriptions.get());
+
+                                                Sms sms = new Sms();
+                                                sms.setDateCreated(LocalDateTime.now());
+                                                sms.setSmsContext(SmsContext.WALLET_TO_NHIF_PAYMENT);
+                                                sms.setMobileNumber(subscriptions.get().getMobileNumber());
+                                                sms.setReferenceNumber("SMS"+transferRequests.getIdNumber());
+                                                sms.setMessage("Dear "+subscriptions.get().getFirstName()+", Your payment of KES "+transferRequests.getAmount().intValue() +" to "+beneficiary.get().getFirstName() +" "+beneficiary.get().getMiddleName()+"'s account has been processed successfully.");
+                                                smsRepository.save(sms);
+                                                sms.setReferenceNumber(sms.getReferenceNumber()+"-"+sms.getId());
+                                                smsRepository.save(sms);
+
                                         } else {
                                                 StringBuilder error = new StringBuilder();
                                                 fundsTransferResponse.errors.forEach(s -> error.append("\n").append(s));
                                                 transferRequests.setErrorsDescription(error.toString());
-
+                                                fundsTransferRequestsRepository.save(transferRequests);
                                         }
-                                        fundsTransferRequestsRepository.save(transferRequests);
+
                                 }
                         } else {
                                 log.info("Wallet balance not enough to initiate the payment request for beneficiaries at {}", new Date());
@@ -135,11 +154,11 @@ private void submitFundsTransfers() {
 
 }
 
-@Scheduled(fixedDelay = (10000)) //10 s
+@Scheduled(fixedDelay = (2000)) //2s
 public void scheduleFixedDelayTask() {
-        log.info("Funds transfer scheduler activated at {}", new Date());
+        //log.info("Funds transfer scheduler activated at {}", new Date());
         submitFundsTransfers();
-        log.info("Funds transfer scheduler closed at {}", new Date());
+        //log.info("Funds transfer scheduler closed at {}", new Date());
 }
 
 }

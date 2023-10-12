@@ -9,12 +9,12 @@ import com.sebin.uhc.entities.payments.MpesaRequests;
 import com.sebin.uhc.exceptions.ExceptionManager;
 import com.sebin.uhc.models.RequestLogModel;
 import com.sebin.uhc.models.TokenTypes;
-import com.sebin.uhc.models.mpesa.MpesaBody;
 import com.sebin.uhc.models.mpesa.WalletBalance;
 import com.sebin.uhc.models.requests.onboarding.Request;
 import com.sebin.uhc.models.requests.payments.Mpesa;
 import com.sebin.uhc.models.requests.payments.STKPush;
 import com.sebin.uhc.models.requests.payments.WalletBalanceRequest;
+import com.sebin.uhc.models.responses.notifications.MpesaResponse;
 import com.sebin.uhc.models.responses.onboarding.Header;
 import com.sebin.uhc.models.responses.onboarding.Response;
 import com.sebin.uhc.models.responses.payments.MpesaNotification;
@@ -110,10 +110,12 @@ public class MpesaService {
             mpesaRequests.setAmount(request.getBody().getAmount());
             mpesaRequests.setDescription(request.getBody().getDescription());
             mpesaRequests.setDateCreated(LocalDateTime.now());
-            mpesaRequests.setReferenceNumber(General.getReference("M"+request.getBody().getIdNumber().trim()));
+            mpesaRequests.setReferenceNumber(configs.getMpesa_invoice_prefix());
             MpesaRequests savedRequest = mpesaRequestsRepository.save(mpesaRequests);
+            mpesaRequests.setReferenceNumber(mpesaRequests.getReferenceNumber()+mpesaRequests.getId());
+            MpesaRequests updatedRequest = mpesaRequestsRepository.save(mpesaRequests);
 
-            new Thread(() -> initiateSTKPush(savedRequest)).start();
+            new Thread(() -> initiateSTKPush(updatedRequest)).start();
 
             return new Response<>(new Header(true,  ResponseCodes.SUCCESS.getCode(), "STK push initiated successfully."));
 
@@ -181,7 +183,8 @@ public class MpesaService {
         STKPush stkPush = new STKPush();
         stkPush.setAmount(mpesaRequests.getAmount());
         stkPush.setCallbackUrl(configs.getMpesa_payment_notification_url()+"?referenceNumber="+ mpesaRequests.getReferenceNumber());
-        stkPush.setInvoiceNumber(mpesaRequests.getIdNumber());
+        //stkPush.setInvoiceNumber(mpesaRequests.getIdNumber());
+        stkPush.setInvoiceNumber(mpesaRequests.getReferenceNumber());
         stkPush.setOrgPassKey(configs.getMpesa_orgPassKey());
         stkPush.setPhoneNumber(mpesaRequests.getMobileNumber().substring(1));
         stkPush.setOrgShortCode(configs.getMpesa_orgShortCode());
@@ -191,7 +194,7 @@ public class MpesaService {
     }
 
     @Transactional
-    public void createNotification(MpesaBody request, RequestLogModel requestLogModel,String referenceNumber) {
+    public void createNotification(MpesaResponse mpesaResponse, RequestLogModel requestLogModel, String referenceNumber) {
         StringBuilder stringBuilder = new StringBuilder();
         try {
             log.info("Mpesa notification received at {} for request Id {}", LocalDateTime.now(), requestLogModel.getRequestId());
@@ -203,8 +206,8 @@ public class MpesaService {
                 throw new Exception("Mpesa reference Number was not found");
             }
 
-            double amount = Double.parseDouble(String.valueOf(request.getStkCallback().getCallbackMetadata().getItem().get(0).getValue()));
-            String mpesaRef = String.valueOf(request.getStkCallback().getCallbackMetadata().getItem().get(1).getValue());
+            double amount = Double.parseDouble(mpesaResponse.getRequestPayload().getAdditionalData().getNotificationData().getTransactionAmt());
+            String mpesaRef = mpesaResponse.getHeader().getOriginatorConversationID();
 
             mpesaRequests.get().setPaid(true);
             mpesaRequestsRepository.save(mpesaRequests.get());
@@ -232,7 +235,7 @@ public class MpesaService {
                     walletTransactions = walletTransactionRepository.save(walletTransactions);
                     stringBuilder.append("\n").append("Wallet transaction entry created");
 
-                    stringBuilder.append("\n").append(String.format("Subscriber for notification found, mobile %s", request.getStkCallback().getCallbackMetadata().getItem().get(4).getValue()));
+                    stringBuilder.append("\n").append(String.format("Subscriber for notification found, mobile %s", mpesaResponse.getRequestPayload().getAdditionalData().getNotificationData().getDebitMSISDN()));
 
                     if(subscriptions.get().getWallet() != null) {
                         log.info("updating wallet for the subscriber oof mobile {} and Id {} at {} for the request Id {}", subscriptions.get().getMobileNumber(), subscriptions.get().getPersonId(), new Date(), requestLogModel.getRequestId());
@@ -241,7 +244,7 @@ public class MpesaService {
                         log.info("Updating wallet for request {} at {}", requestLogModel.getRequestId(), new Date());
                         stringBuilder.append("\n").append("Wallet updating...");
                         subscriptions.get().getWallet().setAmount(subscriptions.get().getWallet().getAmount() + amount);
-                        stringBuilder.append("\n").append(String.format("Wallet for %s updated with %s", request.getStkCallback().getCallbackMetadata().getItem().get(4).getValue(), amount));
+                        stringBuilder.append("\n").append(String.format("Wallet for %s updated with %s", mpesaResponse.getRequestPayload().getAdditionalData().getNotificationData().getDebitMSISDN(), amount));
                         Wallet newWallet =  walletRepository.save(subscriptions.get().getWallet());
                         walletTransactions.setWalletBalance(newWallet.getAmount());
                     }
@@ -254,8 +257,8 @@ public class MpesaService {
                     log.info("The provided reference number {} has already been used for the request {} at {}", referenceNumber, requestLogModel.getRequestId(), new Date());
                 }
             } else {
-                log.info("No subscriber was found matching mobile number {} for the notification with request Id {} at {}", request.getStkCallback().getCallbackMetadata().getItem().get(4).getValue(), requestLogModel.getRequestId(), new Date());
-                stringBuilder.append("\n").append(String.format("No subscriber matching %s", request.getStkCallback().getCallbackMetadata().getItem().get(4).getValue()));
+                log.info("No subscriber was found matching mobile number {} for the notification with request Id {} at {}", mpesaResponse.getRequestPayload().getAdditionalData().getNotificationData().getDebitMSISDN(), requestLogModel.getRequestId(), new Date());
+                stringBuilder.append("\n").append(String.format("No subscriber matching %s", mpesaResponse.getRequestPayload().getAdditionalData().getNotificationData().getDebitMSISDN()));
             }
         } catch (Exception exception) {
             log.error("MPesa notification exception at {} for request Id {} with message {}", new Date(), requestLogModel.getRequestId(), exception.getMessage());

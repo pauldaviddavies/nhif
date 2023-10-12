@@ -1,6 +1,7 @@
 package com.sebin.uhc.services.reports;
 
 import com.sebin.uhc.commons.Criteria;
+import com.sebin.uhc.commons.General;
 import com.sebin.uhc.commons.Helper;
 import com.sebin.uhc.commons.ResponseCodes;
 import com.sebin.uhc.entities.WalletTransactions;
@@ -85,22 +86,24 @@ public class ReportingService {
             }
 
 
-            StringBuilder s = new StringBuilder("===Mini Statement===");
+            StringBuilder s = new StringBuilder("Last 5 transactions (KES)");
             for(WalletTransactions wt : walletTransactions) {
                 statements.add(new Statement(wt.getAmount(), wt.getWalletBalance(), wt.getTransactionType(), wt.getDateCreated()));
-                s.append("\n").append(String.format("Date: %s, Amount: %s, Type: %s", wt.getDateCreated(), wt.getAmount(), wt.getTransactionType()));
+                s.append("\n").append(String.format("Date: %s, Amount: %s, Txn Type: %s", (wt.getDateCreated()+"").substring(0,10), wt.getAmount(), wt.getTransactionType()));
             }
-            s.append("\n").append("===END===");
 
             stringBuilder.append("\n").append(String.format("Statement request successful. Records found %s", statements.size()));
 
-            if(request.getBody().getStatementType().equals(Criteria.MINI.getCriterion())) {
+            if(request.getBody().getStatementType().equalsIgnoreCase(Criteria.MINI.getCriterion())) {
                 log.info("Being a mini-statement, an sms entry is being created for sending to subscriber for request {} at {}", request.getHeader().getRequestId(), new Date());
                 Sms sms = new Sms();
                 sms.setDateCreated(LocalDateTime.now());
                 sms.setSmsContext(SmsContext.MINI_STATEMENT);
                 sms.setMobileNumber(subscriptions.get().getMobileNumber());
                 sms.setMessage(s.toString());
+                sms.setReferenceNumber("SMS"+subscriptions.get().getPersonId());
+                smsRepository.save(sms);
+                sms.setReferenceNumber(sms.getReferenceNumber()+"-"+sms.getId());
                 smsRepository.save(sms);
                 stringBuilder.append("\n").append("Creating sms entry.");
             }

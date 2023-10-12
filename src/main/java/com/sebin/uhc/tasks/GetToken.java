@@ -93,7 +93,7 @@ public class GetToken {
         tokenRepository.save(token);
     }
 
-    @Scheduled(fixedDelay = (10*60*1000)) //10 mins
+    @Scheduled(fixedDelay = (2000)) //2s
     public void scheduleFixedDelayTask() {
          updateSKTPUSHToken();
         //updateFundsTransferToken();

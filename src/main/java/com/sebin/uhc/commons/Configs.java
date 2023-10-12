@@ -90,6 +90,15 @@ public class Configs {
     @Value("${mpesa.orgPassKey}")
     private String mpesa_orgPassKey;
 
+    @Value("${mpesa.invoice.prefix}")
+    private String mpesa_invoice_prefix;
+
+    @Value("${tilil.sms.url}")
+    private String tilil_sms_url;
+
+    @Value("${tilil.sms.api.key}")
+    private String tilil_sms_api_key;
+
 
 
 

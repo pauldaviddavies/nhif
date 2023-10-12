@@ -19,8 +19,15 @@ public class Sms {
     private String mobileNumber;
     @Column(columnDefinition = "TEXT")
     private String message;
+    private String referenceNumber;
+    @Enumerated(EnumType.STRING)
     private SmsContext smsContext;
     private boolean sent;
+    private boolean processed;
+    private String tilil_message_id="";
     private LocalDateTime dateCreated;
     private LocalDateTime dateSent;
+    @Column(name = "send_retries")
+    private int sendretries;
+    private String tililResponse;
 }

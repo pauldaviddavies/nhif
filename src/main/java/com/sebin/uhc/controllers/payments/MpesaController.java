@@ -3,17 +3,13 @@ package com.sebin.uhc.controllers.payments;
 import com.google.gson.Gson;
 import com.sebin.uhc.commons.EndPoints;
 import com.sebin.uhc.commons.Helper;
-import com.sebin.uhc.entities.Wallet;
-import com.sebin.uhc.models.mpesa.MPesaResponse;
-import com.sebin.uhc.models.mpesa.MpesaBody;
 import com.sebin.uhc.models.mpesa.WalletBalance;
 import com.sebin.uhc.models.requests.onboarding.Request;
 import com.sebin.uhc.models.requests.onboarding.RequestHeader;
 import com.sebin.uhc.models.requests.payments.Mpesa;
 import com.sebin.uhc.models.requests.payments.WalletBalanceRequest;
-import com.sebin.uhc.models.responses.onboarding.Header;
+import com.sebin.uhc.models.responses.notifications.MpesaResponse;
 import com.sebin.uhc.models.responses.onboarding.Response;
-import com.sebin.uhc.services.onboarding.BeneficiariesService;
 import com.sebin.uhc.services.onboarding.RequestLogTrailService;
 import com.sebin.uhc.services.payments.MpesaService;
 import io.swagger.v3.oas.annotations.Hidden;
@@ -47,16 +43,19 @@ public class MpesaController {
 
     @Hidden
     @PostMapping(value = EndPoints.MPESA_PAYMENT_NOTIFICATION, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public void createNotification(@RequestParam(name = "referenceNumber") String referenceNumber, HttpServletRequest servletRequest) {
+    public void createNotification(HttpServletRequest servletRequest) {
         try {
         log.info("MPesa payment notification at {}", new Date());
         String notification_data = servletRequest.getReader().lines().collect(Collectors.joining());
-        MPesaResponse mPesaResponse = new Gson().fromJson(notification_data, MPesaResponse.class);
-        Request<MpesaBody> req = new Request<>();
-        req.setBody(mPesaResponse.getBody());
+        System.out.println("notification_data_"+notification_data);
+        MpesaResponse mPesaResponse = new Gson().fromJson(notification_data, MpesaResponse.class);
+        Request<MpesaResponse.RequestPayload> req = new Request<>();
+        req.setBody(mPesaResponse.getRequestPayload());
         req.setHeader(new RequestHeader());
-        req.getHeader().setRequestId(mPesaResponse.getBody().getStkCallback().getMerchantRequestID());
-        service.createNotification(mPesaResponse.getBody(), Helper.validateRequestHeader("MPesa payment callback", req, servletRequest, requestLogTrailService),referenceNumber);
+        req.getHeader().setRequestId(mPesaResponse.getRequestPayload().getAdditionalData().getNotificationData().getBusinessKey().replace("#","-"));
+
+        String referenceNumber=(mPesaResponse.getRequestPayload().getAdditionalData().getNotificationData().getBusinessKey()).replace("#","-");
+        service.createNotification(mPesaResponse, Helper.validateRequestHeader("MPesa payment callback", req, servletRequest, requestLogTrailService),referenceNumber);
         }catch (Exception ex) {
             log.error("Exception while creating MPesa notification at {}", new Date());
         }
