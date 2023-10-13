@@ -22,7 +22,7 @@ import java.util.List;
 @Component
 @EnableScheduling
 @Slf4j(topic = ":: VOOMA-UPDATE ::: TASK ::")
-public class SendToVooma {
+public class SendSubscriptionToVooma {
         @Autowired
         private SubscriptionsRepository subscriptionsRepository;
         @Autowired

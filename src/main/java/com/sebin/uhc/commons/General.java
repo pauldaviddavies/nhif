@@ -24,6 +24,10 @@ public class General {
     public  static  StringBuilder result;
 
 
+    public static String getUniqueCode() {
+        return refFormat.format(new Date());
+    }
+
     public static String send_request(String requestId, String url, String paramsJSON, String Content_Type, String auth)
     {
         try {

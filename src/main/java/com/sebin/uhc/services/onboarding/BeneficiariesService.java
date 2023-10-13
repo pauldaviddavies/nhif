@@ -3,19 +3,23 @@ package com.sebin.uhc.services.onboarding;
 import com.sebin.uhc.commons.Helper;
 import com.sebin.uhc.commons.ResponseCodes;
 import com.sebin.uhc.commons.Statuses;
+import com.sebin.uhc.entities.notifications.Sms;
 import com.sebin.uhc.entities.onboarding.Beneficiaries;
 import com.sebin.uhc.entities.onboarding.BeneficiariesArch;
 import com.sebin.uhc.entities.onboarding.Subscriptions;
 import com.sebin.uhc.exceptions.ExceptionManager;
 import com.sebin.uhc.models.Beneficiary;
 import com.sebin.uhc.models.RequestLogModel;
+import com.sebin.uhc.models.SmsContext;
 import com.sebin.uhc.models.requests.onboarding.Request;
 import com.sebin.uhc.models.requests.onboarding.SponsorBeneficiary;
 import com.sebin.uhc.models.responses.onboarding.Header;
 import com.sebin.uhc.models.responses.onboarding.Response;
+import com.sebin.uhc.repositories.SmsRepository;
 import com.sebin.uhc.repositories.onboarding.BeneficiaryRepository;
 import com.sebin.uhc.repositories.onboarding.SubscriptionsRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -37,6 +41,8 @@ public class BeneficiariesService {
     private RequestLogTrailService requestLogTrailService;
     @Autowired
     private BeneficiaryArchService beneficiaryArchService;
+    @Autowired
+    private SmsRepository smsRepository;
 
     public Response<?> addBeneficiary(Request<Beneficiary> request, RequestLogModel requestLogModel) {
         StringBuilder stringBuilder = new StringBuilder();
@@ -90,6 +96,17 @@ public class BeneficiariesService {
             person.setDateOfBirth(request.getBody().getDateOfBirth());
             person = repository.save(person);
             if(person.getId() > 0) {
+
+                Sms sms = new Sms();
+                sms.setDateCreated(LocalDateTime.now());
+                sms.setSmsContext(SmsContext.WELCOME);
+                sms.setMobileNumber(sponsor.get().getMobileNumber());
+                sms.setMessage("Dear "+sponsor.get().getFirstName()+",\nYou have successfully added "+ ObjectUtils.defaultIfNull(person.getFirstName(),"")+" "+ObjectUtils.defaultIfNull(person.getMiddleName(),"")+" "+ObjectUtils.defaultIfNull(person.getSurname(),"")+" as your beneficiary.");
+                sms.setReferenceNumber("SMS"+sponsor.get().getPersonId());
+                sms =smsRepository.save(sms);
+                sms.setReferenceNumber(sms.getReferenceNumber()+"-"+sms.getId());
+                sms = smsRepository.save(sms);
+
                 stringBuilder.append("\n").append("Beneficiary added.");
                 log.info("Beneficiary {} added successfully to sponsor {} at {}", request.getBody().getPersonId(), request.getBody().getSponsorMobileNumber(), new Date());
                 return new Response<>(new Header(true,  ResponseCodes.SUCCESS.getCode(), "Beneficiary added successfully."));
@@ -202,6 +219,17 @@ public class BeneficiariesService {
                 archiveBeneficiary(beneficiary.get());
                 repository.delete(beneficiary.get());
                 stringBuilder.append("\n").append("Beneficiary removed successfully.");
+
+                Sms sms = new Sms();
+                sms.setDateCreated(LocalDateTime.now());
+                sms.setSmsContext(SmsContext.WELCOME);
+                sms.setMobileNumber(subscriptions.get().getMobileNumber());
+                sms.setMessage("Dear "+subscriptions.get().getFirstName()+",\nYou have successfully removed "+ ObjectUtils.defaultIfNull(beneficiary.get().getFirstName(),"")+" "+ObjectUtils.defaultIfNull(beneficiary.get().getMiddleName(),"")+" "+ObjectUtils.defaultIfNull(beneficiary.get().getSurname(),"")+" as your beneficiary.");
+                sms.setReferenceNumber("SMS"+subscriptions.get().getPersonId());
+                sms =smsRepository.save(sms);
+                sms.setReferenceNumber(sms.getReferenceNumber()+"-"+sms.getId());
+                sms = smsRepository.save(sms);
+
                 return new Response<>(new Header(true,ResponseCodes.SUCCESS.getCode(),String.format("Beneficiary with Id %s was removed successfully.", request.getBody().getBeneficiaryIdOrPassportNumber())));
             }
 

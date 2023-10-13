@@ -64,6 +64,9 @@ public class Configs {
     @Value("${FT.request.url}")
     private String FT_request_url;
 
+    @Value("${kcb.opt.out.url}")
+    private String kcb_opt_out_url;
+
     //SEBIN ENDPOINTS
 
     @Value("${sebin.mpesa.notification.url}")

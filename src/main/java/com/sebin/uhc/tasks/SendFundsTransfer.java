@@ -73,6 +73,12 @@ private void submitFundsTransfers() {
                         if(subscriptions.isEmpty())
                                 continue;
 
+                        if(beneficiary.get().getMemberNumber() == null)
+                        {
+                               log.info("Beneficiary with id {} has null member number at {}",beneficiary.get().getPersonId(), LocalDateTime.now());
+                                continue;
+                        }
+
                         if(subscriptions.get().getWallet().getAmount() > 0) {
                                 if(transferRequests.getAmount() > subscriptions.get().getWallet().getAmount()) {
                                         log.info("Amount({}) requested for {} at {} more than the wallet balance({}) for {}",

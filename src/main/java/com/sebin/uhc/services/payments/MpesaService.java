@@ -117,7 +117,7 @@ public class MpesaService {
             mpesaRequests.setDateCreated(LocalDateTime.now());
             mpesaRequests.setReferenceNumber(configs.getMpesa_invoice_prefix());
             MpesaRequests savedRequest = mpesaRequestsRepository.save(mpesaRequests);
-            mpesaRequests.setReferenceNumber(mpesaRequests.getReferenceNumber()+mpesaRequests.getId());
+            mpesaRequests.setReferenceNumber((mpesaRequests.getId() < 100) ? (mpesaRequests.getReferenceNumber()+"00"+mpesaRequests.getId()) : (mpesaRequests.getReferenceNumber()+mpesaRequests.getId()));
             MpesaRequests updatedRequest = mpesaRequestsRepository.save(mpesaRequests);
 
             new Thread(() -> initiateSTKPush(updatedRequest)).start();
@@ -258,7 +258,7 @@ public class MpesaService {
                         sms.setDateCreated(LocalDateTime.now());
                         sms.setSmsContext(SmsContext.WELCOME);
                         sms.setMobileNumber(subscriptions.get().getMobileNumber());
-                        sms.setMessage("Dear "+subscriptions.get().getFirstName()+",\nYour payment of KES "+amount+" has been received successfully. Accumulation balance is KES "+newWallet.getAmount());
+                        sms.setMessage("Dear "+subscriptions.get().getFirstName()+",\nYour payment of KES "+amount+" has been received successfully. Accumulation balance is KES "+newWallet.getAmount()+"\nREF: "+walletTransactions.getWallet().getId()+"-"+walletTransactions.getId());
                         sms.setReferenceNumber("SMS"+subscriptions.get().getPersonId());
                         smsRepository.save(sms);
                         sms.setReferenceNumber(sms.getReferenceNumber()+"-"+sms.getId());

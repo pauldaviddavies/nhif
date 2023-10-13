@@ -44,7 +44,7 @@ public class SendSms {
                                 smsRequest.setMobile(sms.getMobileNumber().substring(1));
 
                                 String request = new Gson().toJson(smsRequest);
-                                log.info("Sending sms request {} to tilil at {}", request , new Date());
+                                log.info("Sending sms id {} to tilil at {}", sms.getId() , new Date());
                                 String sms_resp = General.send_request(sms.getReferenceNumber(),  configs.getTilil_sms_url(), request, AppConstants.APPLICATION_JSON, null);
                                 log.info("Tilil sms response {} at {}", sms_resp, new Date());
 

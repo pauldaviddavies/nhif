@@ -28,6 +28,8 @@ import org.apache.commons.lang3.EnumUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -37,7 +39,7 @@ import java.util.function.Predicate;
 
 @Slf4j(topic = ":: SERVICE :: SUBSCRIPTION :::")
 @Service
-@Transactional
+//@Transactional
 public class SubscriptionsService {
     @Autowired
     private BeneficiaryRepository beneficiaryRepository;
@@ -371,6 +373,7 @@ public class SubscriptionsService {
         }
     }
 
+
     public Response<?> unsubscribe(Request<String> request, RequestLogModel requestLogModel) {
         StringBuilder stringBuilder = new StringBuilder("Validation started.");
         try {
@@ -389,6 +392,17 @@ public class SubscriptionsService {
             }
 
             if(person.get().getWallet().getAmount() > 0) {
+
+                Sms sms = new Sms();
+                sms.setDateCreated(LocalDateTime.now());
+                sms.setSmsContext(SmsContext.WELCOME);
+                sms.setMobileNumber(person.get().getMobileNumber());
+                sms.setMessage("Dear "+person.get().getFirstName()+",\nYour account still has an accumulated balance of KES "+person.get().getWallet().getAmount());
+                sms.setReferenceNumber("SMS"+person.get().getPersonId());
+                sms =smsRepository.saveAndFlush(sms);
+                sms.setReferenceNumber(sms.getReferenceNumber()+"-"+sms.getId());
+                sms = smsRepository.saveAndFlush(sms);
+
                 stringBuilder.append("\n").append("Balance has to be zero");
                 log.info("Wallet balance not zero, cannot opt out for subscriber {} at {} for {}", request.getBody(), new Date(), requestLogModel.getRequestId());
                 throw new ExceptionManager("Balance has to be zero to unsubscribe.", ResponseCodes.FAIL.getCode());
@@ -402,14 +416,39 @@ public class SubscriptionsService {
             }
 
             UnSubscriptionsRequests unsubscriptionsRequests = new UnSubscriptionsRequests(person.get().getPersonId(), "KCB", "callbackURl", LocalDateTime.now(), LocalDateTime.now(), Statuses.REMOVED.getStatus(), "requestId");
+
+            unsubscriptionsRequests.setNHIFMember(person.get().isNHIFMember());
+            unsubscriptionsRequests.setDateOfBirth(person.get().getDateOfBirth());
+            unsubscriptionsRequests.setGender(person.get().getGender());
+            unsubscriptionsRequests.setMemberNumber(person.get().getMemberNumber());
+            unsubscriptionsRequests.setMobileNumber(person.get().getMobileNumber());
+            unsubscriptionsRequests.setKcbMessageId(person.get().getKcbMessageId());
+            unsubscriptionsRequests.setKcbExternalId(person.get().getKcbExternalId());
+            unsubscriptionsRequests.setInNHS(person.get().isInNHS());
+            unsubscriptionsRequests.setPassword(person.get().getPassword());
+            unsubscriptionsRequests.setSubscriptionDate(person.get().getSubscriptionDate());
             unsubscriptionsRequests = unsubscriptionRepository.save(unsubscriptionsRequests);
+            unsubscriptionsRequests.setRequestId("U"+person.get().getPersonId()+unsubscriptionsRequests.getId());
+            unsubscriptionRepository.save(unsubscriptionsRequests);
+
             if(unsubscriptionsRequests.getId() > 0) {
                 stringBuilder.append("\n").append("Request to unsubscribe logged.");
                 log.info("Subscriber requested logged in request logs successfully.");
                 if(removeSubscriber(person.get())) {
+
+                    Sms sms = new Sms();
+                    sms.setDateCreated(LocalDateTime.now());
+                    sms.setSmsContext(SmsContext.WELCOME);
+                    sms.setMobileNumber(person.get().getMobileNumber());
+                    sms.setMessage("Dear "+person.get().getFirstName()+",\nYou have successfully opted out of NHIF Premium services");
+                    sms.setReferenceNumber("SMS"+person.get().getPersonId());
+                    sms =smsRepository.saveAndFlush(sms);
+                    sms.setReferenceNumber(sms.getReferenceNumber()+"-"+sms.getId());
+                    sms = smsRepository.saveAndFlush(sms);
+
                     stringBuilder.append("\n").append("Opted out successfully.");
                     log.info("{} for request {} un-subscribed successfully at {}", person.get().getPersonId(), request.getHeader().getRequestId(), new Date());
-                    return new Response<>(new Header("Successfully opted out of this service.", ResponseCodes.SUCCESS.getCode()));
+                    return new Response<>(new Header(true,"Successfully opted out of this service.", ResponseCodes.SUCCESS.getCode()));
                 } else {
                     stringBuilder.append("\n").append("Could not opt out");
                     log.info("{} for request {} could not be subscribed at {}", person.get().getPersonId(), request.getHeader().getRequestId(), new Date());
@@ -587,6 +626,11 @@ public class SubscriptionsService {
                 throw new ExceptionManager("Incorrect PIN", ResponseCodes.PIN_INCORRECT.getCode());
             }
 
+            if(!(request.getBody().getMobileNumber().equalsIgnoreCase(person.get().getMobileNumber())))
+            {
+                throw new ExceptionManager("Please dial from your main Mobile Number", ResponseCodes.INVALID_MAIN_MOBILE.getCode());
+            }
+
             stringBuilder.append("\n").append("PIN validation was successful.");
             log.info("PIN set for {} was successful {}", request.getBody().getMobileNumber(), new Date());
             return new Response<>(new Header(true,  ResponseCodes.SUCCESS.getCode(), "PIN validated successfully."));
@@ -608,7 +652,7 @@ public class SubscriptionsService {
 
 
 
-    @Transactional
+
     public Response<?> changePin(Request<ChangePin> request, RequestLogModel requestLogModel) {
         StringBuilder stringBuilder = new StringBuilder();
         try {
